@@ -1,0 +1,2953 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Prediksi Sepakbola v200 GODMODE</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+/* ===========================================================
+   v200 GODMODE — UI BASE STYLE
+   Clean • Dark Neon • Professional
+=========================================================== */
+
+:root {
+   --bg: #04070f;
+   --panel: #0b111d;
+   --border: #1d2736;
+   --text: #d8e1ff;
+   --sub: #7c8bb0;
+   --accent: #4cc0ff;
+   --accent2: #ff6a6a;
+   --gold: #ffdd55;
+}
+
+body {
+   margin:0;
+   padding:0;
+   background:var(--bg);
+   color:var(--text);
+   font-family: "Segoe UI", sans-serif;
+}
+
+.container {
+   width: 96%;
+   max-width: 1600px;
+   margin: auto;
+   padding-top: 15px;
+}
+
+h1 {
+   text-align:center;
+   font-weight:600;
+   margin-bottom:20px;
+   letter-spacing:1px;
+   color:var(--gold);
+   text-shadow:0 0 8px rgba(255,221,85,0.4);
+}
+
+/* PANEL */
+.box {
+   background: var(--panel);
+   border: 1px solid var(--border);
+   border-radius: 10px;
+   padding: 15px;
+   margin-bottom: 18px;
+}
+
+.box-header {
+   display:flex;
+   justify-content:space-between;
+   align-items:center;
+   margin-bottom:10px;
+}
+
+.box-header h2 {
+   font-size: 17px;
+   margin:0;
+   font-weight:600;
+   color: var(--accent);
+}
+
+.tag {
+   background: var(--border);
+   padding: 3px 8px;
+   border-radius: 6px;
+   font-size:11px;
+   color:var(--sub);
+}
+
+label {
+   display:block;
+   margin-top:10px;
+   font-size:13px;
+   color:var(--sub);
+}
+
+input, select, textarea {
+   width:100%;
+   margin-top:4px;
+   padding:7px;
+   font-size:13px;
+   border-radius:6px;
+   background:#0e1522;
+   border:1px solid #233044;
+   color:var(--text);
+}
+
+textarea {
+   resize: vertical;
+}
+
+/* BUTTON */
+.btn-main {
+   margin-top:12px;
+   width:100%;
+   padding:10px;
+   border:none;
+   border-radius:6px;
+   background:var(--accent);
+   color:#000;
+   font-size:15px;
+   font-weight:600;
+   cursor:pointer;
+}
+
+.btn-clear {
+   margin-top:8px;
+   width:100%;
+   padding:10px;
+   border:none;
+   border-radius:6px;
+   background:#333;
+   color:#ccc;
+   cursor:pointer;
+   font-size:13px;
+}
+
+.btn-auto {
+   display:inline-block;
+   margin:3px;
+   padding:6px 10px;
+   font-size:11px;
+   border:none;
+   border-radius:5px;
+   background:#1c2a3d;
+   color:var(--text);
+   cursor:pointer;
+}
+
+/* GRID */
+.row {
+   display:flex;
+   flex-wrap:wrap;
+   gap:14px;
+}
+
+.col-2 {
+   flex:1 1 300px;
+}
+
+.col {
+   flex:1 1 300px;
+}
+</style>
+
+</head>
+<body>
+
+<div class="container">
+<h1>PREDIKSI SEPAKBOLA v200 GODMODE</h1>
+
+<!-- ============================
+     INPUT TIM DASAR
+============================ -->
+<div class="row">
+   <div class="col">
+      <div class="box">
+         <div class="box-header">
+            <h2>HOME TEAM</h2>
+            <span class="tag">Tim Tuan Rumah</span>
+         </div>
+
+         <label>Nama Tim Home</label>
+         <input id="h_name">
+
+         <label>GPG (Goals per Game)</label>
+         <input id="h_gpg" type="number" step="0.01">
+
+         <label>GC (Goals Conceded)</label>
+         <input id="h_gc" type="number" step="0.01">
+
+         <label>Shots</label>
+         <input id="h_shots" type="number">
+
+         <label>Shots Conceded</label>
+         <input id="h_shc" type="number">
+      </div>
+   </div>
+
+   <div class="col">
+      <div class="box">
+         <div class="box-header">
+            <h2>AWAY TEAM</h2>
+            <span class="tag">Tim Tamu</span>
+         </div>
+
+         <label>Nama Tim Away</label>
+         <input id="a_name">
+
+         <label>GPG</label>
+         <input id="a_gpg" type="number" step="0.01">
+
+         <label>GC</label>
+         <input id="a_gc" type="number" step="0.01">
+
+         <label>Shots</label>
+         <input id="a_shots" type="number">
+
+         <label>Shots Conceded</label>
+         <input id="a_shc" type="number">
+      </div>
+   </div>
+</div>
+<script>
+/* ===========================================================
+   v200 GODMODE — PART 2
+   GLOBAL CORE HELPER (Math, Clamp, Poisson Base)
+   Tidak menyentuh DOM, aman di-load kapan saja.
+=========================================================== */
+(function(global){
+  "use strict";
+
+  /* ---------- Basic Number Helper ---------- */
+  function num(v){
+    if (v === null || v === undefined) return 0;
+    if (typeof v === "number") {
+      return isNaN(v) ? 0 : v;
+    }
+    v = (""+v).replace(",", ".").trim();
+    const n = parseFloat(v);
+    return isNaN(n) ? 0 : n;
+  }
+
+  function clamp(v, min, max){
+    v = num(v);
+    if (v < min) return min;
+    if (v > max) return max;
+    return v;
+  }
+
+  function lerp(a,b,t){
+    return a + (b-a)*t;
+  }
+
+  function randRange(min,max){
+    return min + Math.random()*(max-min);
+  }
+
+  /* ---------- Factorial & Poisson Base ---------- */
+  const factCache = {0:1,1:1};
+  function factorial(n){
+    n = Math.floor(Math.max(0,n));
+    if (factCache[n] != null) return factCache[n];
+    let res = 1;
+    for (let i=2;i<=n;i++){
+      res *= i;
+    }
+    factCache[n] = res;
+    return res;
+  }
+
+  function poisson(lambda, k){
+    lambda = Math.max(num(lambda), 0.000001);
+    k = Math.max(0, Math.floor(k));
+    const p = Math.pow(lambda, k) * Math.exp(-lambda) / factorial(k);
+    return p;
+  }
+
+  /* ---------- Export ke namespace global ---------- */
+  global.V200 = global.V200 || {};
+  global.V200.num       = num;
+  global.V200.clamp     = clamp;
+  global.V200.lerp      = lerp;
+  global.V200.randRange = randRange;
+  global.V200.factorial = factorial;
+  global.V200.poisson   = poisson;
+
+})(window);
+</script>
+<!-- ===========================================================
+     PART 3 — ADVANCED HOME/AWAY + MATCH CONTEXT v200
+     (UI saja, bersih tanpa contoh data)
+=========================================================== -->
+
+<!-- ============================
+     ADVANCED HOME / AWAY
+============================ -->
+<div class="row" style="margin-top:18px;">
+
+  <!-- ============================
+       ADVANCED HOME PANEL
+  ============================= -->
+  <div class="col-2">
+    <div class="box">
+      <div class="box-header">
+        <h2>Advanced Home</h2>
+        <span class="tag">Detail Home</span>
+      </div>
+
+      <label>Form 5 Pertandingan (Contoh format saja: WWDLD)</label>
+      <input id="h_form_raw">
+
+      <label>Form Rating (1–10)</label>
+      <input id="h_form" type="number" step="0.1">
+
+      <label>Stability (1–10)</label>
+      <input id="h_stab" type="number" step="0.1">
+
+      <label>Availability %</label>
+      <input id="h_avail" type="number">
+
+      <label>GK Rating (1–10)</label>
+      <input id="h_gk" type="number" step="0.1">
+
+      <label>Cross Accuracy %</label>
+      <input id="h_cross" type="number">
+
+      <label>Build-up Rating (1–10)</label>
+      <input id="h_build" type="number" step="0.1">
+
+      <label>Press Resistance (1–10)</label>
+      <input id="h_pressres" type="number" step="0.1">
+
+      <label>Final Third Threat (1–10)</label>
+      <input id="h_f3t" type="number" step="0.1">
+
+      <label>xThreat (1–10)</label>
+      <input id="h_xthreat" type="number" step="0.1">
+
+      <label>Transition (1–10)</label>
+      <input id="h_trans" type="number" step="0.1">
+
+      <label>Low Block (1–10)</label>
+      <input id="h_lb" type="number" step="0.1">
+
+      <label>High Press Level (1–10)</label>
+      <input id="h_press" type="number" step="0.1">
+
+      <label>Pressure Wave (1–10)</label>
+      <input id="h_wave" type="number" step="0.1">
+
+      <label>Momentum DM15 (1–10)</label>
+      <input id="h_dm15" type="number" step="0.1">
+
+      <label>Directness (1–10)</label>
+      <input id="h_style" type="number" step="0.1">
+
+      <label>Possession Tend. (1–10)</label>
+      <input id="h_poss_t" type="number" step="0.1">
+    </div>
+  </div>
+
+  <!-- ============================
+       ADVANCED AWAY PANEL
+  ============================= -->
+  <div class="col-2">
+    <div class="box">
+      <div class="box-header">
+        <h2>Advanced Away</h2>
+        <span class="tag">Detail Away</span>
+      </div>
+
+      <label>Form 5 Pertandingan</label>
+      <input id="a_form_raw">
+
+      <label>Form Rating (1–10)</label>
+      <input id="a_form" type="number" step="0.1">
+
+      <label>Stability (1–10)</label>
+      <input id="a_stab" type="number" step="0.1">
+
+      <label>Availability %</label>
+      <input id="a_avail" type="number">
+
+      <label>GK Rating (1–10)</label>
+      <input id="a_gk" type="number" step="0.1">
+
+      <label>Cross Accuracy %</label>
+      <input id="a_cross" type="number">
+
+      <label>Build-up Rating (1–10)</label>
+      <input id="a_build" type="number" step="0.1">
+
+      <label>Press Resistance (1–10)</label>
+      <input id="a_pressres" type="number" step="0.1">
+
+      <label>Final Third Threat (1–10)</label>
+      <input id="a_f3t" type="number" step="0.1">
+
+      <label>xThreat (1–10)</label>
+      <input id="a_xthreat" type="number" step="0.1">
+
+      <label>Transition (1–10)</label>
+      <input id="a_trans" type="number" step="0.1">
+
+      <label>Low Block (1–10)</label>
+      <input id="a_lb" type="number" step="0.1">
+
+      <label>High Press Level (1–10)</label>
+      <input id="a_press" type="number" step="0.1">
+
+      <label>Pressure Wave (1–10)</label>
+      <input id="a_wave" type="number" step="0.1">
+
+      <label>Momentum DM15 (1–10)</label>
+      <input id="a_dm15" type="number" step="0.1">
+
+      <label>Directness (1–10)</label>
+      <input id="a_style" type="number" step="0.1">
+
+      <label>Possession Tend. (1–10)</label>
+      <input id="a_poss_t" type="number" step="0.1">
+    </div>
+  </div>
+</div>
+
+<!-- ============================
+     MATCH CONTEXT v200
+============================ -->
+<div class="box" style="margin-top:16px;">
+  <div class="box-header">
+    <h2>Match Context v200</h2>
+    <span class="tag">Coaching • Stadium • Weather • Importance</span>
+  </div>
+
+  <label>Match Mode</label>
+  <select id="ctx_mode">
+    <option value=""></option>
+    <option value="league">League Match</option>
+    <option value="cup">Domestic Cup</option>
+    <option value="ucl">UCL/UEL/UCLQ</option>
+    <option value="derby">Derby</option>
+    <option value="final">Final</option>
+    <option value="title">Title Race</option>
+    <option value="relegation">Relegation Fight</option>
+    <option value="intl">International Match</option>
+    <option value="friendly">Friendly</option>
+  </select>
+
+  <label>Weather</label>
+  <select id="ctx_weather">
+    <option value=""></option>
+    <option value="clear">Clear</option>
+    <option value="rain">Rain</option>
+    <option value="heavy_rain">Heavy Rain</option>
+    <option value="snow">Snow</option>
+    <option value="windy">Windy</option>
+  </select>
+
+  <label>Referee Strictness (1–10)</label>
+  <input id="ctx_ref" type="number" step="0.1">
+
+  <label>Tempo (1–10)</label>
+  <input id="ctx_tempo" type="number" step="0.1">
+
+  <label>Variance (1–10)</label>
+  <input id="ctx_var" type="number" step="0.1">
+
+  <label>Chaos Level (1–10)</label>
+  <input id="ctx_chaos" type="number" step="0.1">
+
+  <label>Stage (Early / Mid / Late)</label>
+  <select id="ctx_stage">
+    <option value=""></option>
+    <option value="early">Early</option>
+    <option value="mid">Mid</option>
+    <option value="late">Late</option>
+  </select>
+
+  <label>Kondisi Lapangan</label>
+  <select id="ctx_pitch">
+    <option value=""></option>
+    <option value="good">Good</option>
+    <option value="medium">Medium</option>
+    <option value="bad">Bad</option>
+    <option value="wet">Wet</option>
+  </select>
+
+  <label>Nama Liga / Kompetisi</label>
+  <input id="ctx_league">
+
+  <label>H2H History (format: 2-1,1-1,0-3,...)</label>
+  <textarea id="ctx_h2h_raw" rows="2"></textarea>
+
+  <label>Catatan Tambahan</label>
+  <textarea id="ctx_note" rows="2"></textarea>
+</div>
+<script>
+/* ===========================================================
+   v200 GODMODE — PART 4
+   OMEGA ENGINE v200 (Attack / Defense / Phase Engine)
+   Membangun dasar perhitungan versi GODMODE.
+=========================================================== */
+(function(global){
+"use strict";
+
+const N = global.V200;   // Helper dari Part 2
+
+/* ===========================================================
+   1. Normalisasi input (0–10 → 0–1 skala)
+=========================================================== */
+function scale10(v){
+  return N.clamp(N.num(v),0,10) / 10;
+}
+
+function scalePercent(v){
+  return N.clamp(N.num(v),0,100) / 100;
+}
+
+/* ===========================================================
+   2. Phase Model v200
+   Build → Progress → Creation → Conversion → Protection
+=========================================================== */
+function calcPhase(home, away){
+
+  /* Home Phases */
+  const H = {
+    build:        scale10(home.build),
+    progress:     scale10(home.pressres),
+    creation:     scale10(home.f3t),
+    conversion:   scale10(home.xthreat),
+    protection:   scale10(home.trans)
+  };
+
+  /* Away Phases */
+  const A = {
+    build:        scale10(away.build),
+    progress:     scale10(away.pressres),
+    creation:     scale10(away.f3t),
+    conversion:   scale10(away.xthreat),
+    protection:   scale10(away.trans)
+  };
+
+  return {H, A};
+}
+
+/* ===========================================================
+   3. Attack Strength v200
+   Kombinasi:
+   - Shots
+   - xThreat
+   - Final Third Threat
+   - GPG
+   + Phase chain weighted
+=========================================================== */
+function calcAttackStrength(h, a){
+
+  function atk(t){
+    const s   = N.num(t.shots);
+    const f3  = scale10(t.f3t);
+    const xT  = scale10(t.xthreat);
+    const gpg = N.clamp(N.num(t.gpg),0,5) / 5;
+
+    return N.clamp(
+      (s/25)*0.30 +
+      f3*0.25     +
+      xT*0.25     +
+      gpg*0.20,
+      0,1
+    );
+  }
+
+  return {
+    H: atk(h),
+    A: atk(a)
+  };
+}
+
+/* ===========================================================
+   4. Defense Strength v200
+   Faktor:
+   - GC
+   - Shots Conceded
+   - GK Rating
+   - Stability
+   - Protection Phase
+=========================================================== */
+function calcDefenseStrength(h,a,phase){
+
+  function def(t, p){
+    const gc  = N.clamp(N.num(t.gc),0,5) / 5;
+    const shc = N.clamp(N.num(t.shc),0,30)/30;
+    const gk  = scale10(t.gk);
+    const stab= scale10(t.stab);
+    const prot= p.protection;
+
+    // Defense strength lebih besar = lebih kuat
+    return N.clamp(
+      gk*0.25 +
+      stab*0.25 +
+      prot*0.20 +
+      (1 - shc)*0.20 +
+      (1 - gc)*0.10,
+      0,1
+    );
+  }
+
+  return {
+    H: def(h, phase.H),
+    A: def(a, phase.A)
+  };
+}
+
+/* ===========================================================
+   5. Chain Threat v200
+   Attack × Build × Progress × Creation × Conversion
+=========================================================== */
+function calcChainThreat(phase, atk){
+
+  function chain(p, atkVal){
+    const raw =
+      atkVal *
+      p.build *
+      p.progress *
+      p.creation *
+      p.conversion;
+
+    return N.clamp(raw, 0, 1);
+  }
+
+  return {
+    H: chain(phase.H, atk.H),
+    A: chain(phase.A, atk.A)
+  };
+}
+
+/* ===========================================================
+   6. Effective Goal Expectancy v200
+   λ = penentu probabilitas gol dasar
+=========================================================== */
+function calcLambda(atk, def){
+  const lambdaH =
+    N.clamp((atk.H * (1 - def.A)) * 2.8, 0.05, 3.2);
+
+  const lambdaA =
+    N.clamp((atk.A * (1 - def.H)) * 2.8, 0.05, 3.2);
+
+  return {
+    H: lambdaH,
+    A: lambdaA
+  };
+}
+
+/* ===========================================================
+   7. Hasil OMEGA ENGINE v200
+   Output lengkap untuk dipakai modul lain:
+   - phase
+   - atk/def strength
+   - chain threat
+   - lambda dasar
+=========================================================== */
+function OmegaEngine_v200(input){
+
+  const home = input.home;
+  const away = input.away;
+
+  const phase = calcPhase(home,away);
+  const atk   = calcAttackStrength(home,away);
+  const def   = calcDefenseStrength(home,away,phase);
+  const chain = calcChainThreat(phase,atk);
+  const lam   = calcLambda(atk,def);
+
+  return {
+    phase: phase,
+    attack: atk,
+    defense: def,
+    chain: chain,
+    lambda: lam
+  };
+}
+
+/* ===========================================================
+   EXPORT ke namespace
+=========================================================== */
+global.V200.Omega = OmegaEngine_v200;
+
+})(window);
+</script>
+<script>
+/* ===========================================================
+   v200 GODMODE — PART 5
+   TACTICAL BRAIN v200
+   Membaca:
+   • Press vs Build-up
+   • Low Block vs Cross / Creation
+   • Transition Vulnerability
+   • Wide vs Central preference
+   • Tempo & Control tendency
+=========================================================== */
+(function(global){
+"use strict";
+const N = global.V200;
+
+/* Helper scale */
+function s10(v){ return N.clamp(N.num(v),0,10); }
+function spct(v){ return N.clamp(N.num(v),0,100); }
+
+/* -----------------------------------------------------------
+   1. Press vs Build-up
+   - tinggi kalau press lawan > build team
+----------------------------------------------------------- */
+function pressVsBuild(home,away){
+  const hPress = s10(home.press);
+  const aPress = s10(away.press);
+  const hBuild = s10(home.build);
+  const aBuild = s10(away.build);
+
+  const hvul = N.clamp((aPress - hBuild + 10)/2, 0, 10); // Home under pressure
+  const avul = N.clamp((hPress - aBuild + 10)/2, 0, 10); // Away under pressure
+
+  return {
+    home_under_press : hvul,
+    away_under_press : avul
+  };
+}
+
+/* -----------------------------------------------------------
+   2. Low Block vs Cross / Creation
+   - mengukur kemampuan membongkar low block
+----------------------------------------------------------- */
+function lowBlockMatch(home,away){
+  const hCross = spct(home.cross);
+  const aCross = spct(away.cross);
+
+  const hF3T   = s10(home.f3t);
+  const aF3T   = s10(away.f3t);
+
+  const hLB    = s10(away.lb); // low block Away, dihadapi Home
+  const aLB    = s10(home.lb); // low block Home, dihadapi Away
+
+  const hBreak = N.clamp((hCross/10) + hF3T*0.6 - hLB*0.3, 0, 10);
+  const aBreak = N.clamp((aCross/10) + aF3T*0.6 - aLB*0.3, 0, 10);
+
+  return {
+    home_break_lowblock : hBreak,
+    away_break_lowblock : aBreak,
+    lowblock_home : aLB,
+    lowblock_away : hLB
+  };
+}
+
+/* -----------------------------------------------------------
+   3. Transition Vulnerability
+   - seberapa rentan dihajar balik saat kehilangan bola
+----------------------------------------------------------- */
+function transitionVuln(home,away){
+  const hTrans  = s10(home.trans);
+  const aTrans  = s10(away.trans);
+  const hStab   = s10(home.stab);
+  const aStab   = s10(away.stab);
+  const hPress  = s10(home.press);
+  const aPress  = s10(away.press);
+
+  const hvul = N.clamp(
+    (aTrans*0.6 + aPress*0.2 + (10-hStab)*0.2),
+    0,10
+  );
+  const avul = N.clamp(
+    (hTrans*0.6 + hPress*0.2 + (10-aStab)*0.2),
+    0,10
+  );
+
+  return {
+    home_vuln_trans : hvul,
+    away_vuln_trans : avul
+  };
+}
+
+/* -----------------------------------------------------------
+   4. Wide vs Central Preference
+   - memakai cross%, directness, final third threat
+----------------------------------------------------------- */
+function widthProfile(team){
+  const cross = spct(team.cross);
+  const style = s10(team.style);    // 1 pelan-positional, 10 direct
+  const f3t   = s10(team.f3t);
+
+  const wide  = N.clamp((cross/10)*0.5 + style*0.2 + f3t*0.3, 0,10);
+  const central = N.clamp(10 - wide,0,10);
+
+  return {wide,central};
+}
+
+function wideVsCentral(home,away){
+  const h = widthProfile(home);
+  const a = widthProfile(away);
+
+  return {
+    home: h,
+    away: a
+  };
+}
+
+/* -----------------------------------------------------------
+   5. Tempo & Control Tendency
+   - siapa yang lebih mungkin mengontrol ritme & bola
+----------------------------------------------------------- */
+function controlProfile(home,away,ctx){
+  const hPossT = s10(home.poss_t);
+  const aPossT = s10(away.poss_t);
+  const tempo  = s10(ctx.tempo || 5);
+
+  const hCtrl = N.clamp(hPossT*0.6 + (10-tempo)*0.2,0,10);
+  const aCtrl = N.clamp(aPossT*0.6 + (10-tempo)*0.2,0,10);
+
+  const balance = Math.max(hCtrl - aCtrl, -10);
+  const ctrlSide = (hCtrl > aCtrl) ? "home" : (aCtrl > hCtrl ? "away" : "balanced");
+
+  return {home:hCtrl,away:aCtrl,side:ctrlSide,delta:balance};
+}
+
+/* -----------------------------------------------------------
+   6. Tactical Summary Builder
+----------------------------------------------------------- */
+function TacticalBrain_v200(input, omegaResult){
+  const home = input.home;
+  const away = input.away;
+  const ctx  = input.ctx || {};
+
+  const pressBuild   = pressVsBuild(home,away);
+  const lowBlockInfo = lowBlockMatch(home,away);
+  const transVuln    = transitionVuln(home,away);
+  const widthMatch   = wideVsCentral(home,away);
+  const control      = controlProfile(home,away,ctx);
+
+  /* simple textual flavour (untuk output nanti, bukan condong) */
+  let keyNotes = [];
+
+  if(pressBuild.home_under_press >= 7){
+    keyNotes.push("Home berpotensi ditekan tinggi oleh Away (press>build).");
+  }
+  if(pressBuild.away_under_press >= 7){
+    keyNotes.push("Away berpotensi ditekan tinggi oleh Home.");
+  }
+
+  if(lowBlockInfo.home_break_lowblock >= 7){
+    keyNotes.push("Home memiliki kapasitas bagus membongkar low block lawan.");
+  }
+  if(lowBlockInfo.away_break_lowblock >= 7){
+    keyNotes.push("Away memiliki kapasitas bagus membongkar low block lawan.");
+  }
+
+  if(transVuln.home_vuln_trans >= 7){
+    keyNotes.push("Home cukup rentan terhadap serangan balik (transition vulnerability tinggi).");
+  }
+  if(transVuln.away_vuln_trans >= 7){
+    keyNotes.push("Away cukup rentan terhadap serangan balik.");
+  }
+
+  if(widthMatch.home.wide >= 7){
+    keyNotes.push("Home cenderung menyerang lewat sisi lebar (wing/cross).");
+  } else if(widthMatch.home.central >= 7){
+    keyNotes.push("Home cenderung menyerang lebih banyak dari area tengah.");
+  }
+
+  if(widthMatch.away.wide >= 7){
+    keyNotes.push("Away cenderung menyerang lewat sisi lebar.");
+  } else if(widthMatch.away.central >= 7){
+    keyNotes.push("Away cenderung menyerang lebih banyak dari area tengah.");
+  }
+
+  if(control.side === "home"){
+    keyNotes.push("Secara profil, Home sedikit lebih berpotensi mengontrol tempo & penguasaan.");
+  } else if(control.side === "away"){
+    keyNotes.push("Secara profil, Away sedikit lebih berpotensi mengontrol tempo & penguasaan.");
+  } else {
+    keyNotes.push("Kontrol tempo & penguasaan cenderung seimbang.");
+  }
+
+  return {
+    press_vs_build   : pressBuild,
+    lowblock_vs_break: lowBlockInfo,
+    trans_vulnerability: transVuln,
+    width_profile    : widthMatch,
+    control_profile  : control,
+    notes            : keyNotes
+  };
+}
+
+/* Export */
+global.V200.Tactical = TacticalBrain_v200;
+
+})(window);
+</script>
+<script>
+/* ===========================================================
+   v200 GODMODE — PART 6
+   CONTEXT ENGINE v200
+   Auto Liga • Auto Weather • Auto Importance • Auto H2H •
+   Pitch Impact • Travel/Stamina • Crowd Impact
+=========================================================== */
+(function(global){
+"use strict";
+const N = global.V200;
+
+/* ================================================
+   1. AUTO LIGA DATABASE
+   Nilai default per liga
+   Murni statistik umum, tidak condong.
+================================================ */
+const LIGA_PROFILE = {
+
+  "Premier League":       { tempo: 8.2, strict: 5.5, chaos: 6.5, goals: 2.82 },
+  "La Liga":              { tempo: 6.9, strict: 7.5, chaos: 4.9, goals: 2.42 },
+  "Serie A":              { tempo: 6.4, strict: 6.3, chaos: 6.8, goals: 2.89 },
+  "Bundesliga":           { tempo: 8.5, strict: 4.9, chaos: 7.8, goals: 3.15 },
+  "Ligue 1":              { tempo: 7.2, strict: 6.1, chaos: 6.2, goals: 2.65 },
+
+  "Liga 1 Indonesia":     { tempo: 5.3, strict: 5.1, chaos: 8.1, goals: 2.55 },
+  "UCL":                  { tempo: 7.9, strict: 5.2, chaos: 7.1, goals: 2.95 },
+  "UEL":                  { tempo: 7.5, strict: 6.0, chaos: 7.4, goals: 2.88 },
+
+  "default":              { tempo: 6.5, strict: 6.0, chaos: 6.0, goals: 2.70 }
+};
+
+/* Normalisasi helper */
+function s10(v){ return N.clamp(N.num(v),0,10); }
+
+/* ===========================================================
+   2. AUTO WEATHER IMPACT
+=========================================================== */
+function weatherImpact(weather){
+  switch(weather){
+    case "rain":        return { tempo:-0.6, chaos:+0.3 };
+    case "heavy_rain":  return { tempo:-1.0, chaos:+0.8 };
+    case "snow":        return { tempo:-1.4, chaos:+1.0 };
+    case "windy":       return { tempo:-0.4, chaos:+0.6 };
+    default:            return { tempo:0, chaos:0 };
+  }
+}
+
+/* ===========================================================
+   3. AUTO IMPORTANCE IMPACT
+=========================================================== */
+function importanceImpact(mode){
+  switch(mode){
+    case "final":        return { chaos:-1.5, tempo:-0.8, risk:+2.0 };
+    case "derby":        return { chaos:+1.8, tempo:+0.4, risk:+1.5 };
+    case "title":        return { chaos:+0.2, tempo:+0.3, risk:+1.2 };
+    case "relegation":   return { chaos:+0.6, tempo:-0.6, risk:+2.2 };
+    case "intl":         return { chaos:+0.3, tempo:-0.4, risk:+1.0 };
+    case "cup":          return { chaos:-0.3, tempo:-0.3, risk:+0.6 };
+    default:             return { chaos:0, tempo:0, risk:0 };
+  }
+}
+
+/* ===========================================================
+   4. AUTO PITCH CONDITION
+=========================================================== */
+function pitchImpact(pitch){
+  switch(pitch){
+    case "medium": return { speed:-0.3, chaos:+0.2 };
+    case "bad":    return { speed:-1.0, chaos:+0.8 };
+    case "wet":    return { speed:-0.6, chaos:+0.5 };
+    default:       return { speed:0, chaos:0 };
+  }
+}
+
+/* ===========================================================
+   5. AUTO TRAVEL FATIGUE (khusus internasional)
+=========================================================== */
+function travelImpact(mode){
+  if(mode !== "intl") return { fatigue:0 };
+  return { fatigue: N.randRange(0.1,0.4) }; 
+}
+
+/* ===========================================================
+   6. CROWD IMPACT
+=========================================================== */
+function crowdImpact(){
+  return {
+    home_boost: N.randRange(0.05,0.15), 
+    pressure:   N.randRange(0.03,0.12)
+  };
+}
+
+/* ===========================================================
+   7. H2H ANALYZER (ELITE)
+=========================================================== */
+function H2HAnalyzer(raw){
+  if(!raw) return { chaos:5, trend:0, margin:0, stability:5 };
+
+  const list = raw.split(",").map(s=>s.trim()).filter(s=>s.includes("-"));
+  if(list.length===0) return { chaos:5, trend:0, margin:0, stability:5 };
+
+  let diffSum = 0;
+  let scores = [];
+
+  list.forEach(v=>{
+    const [a,b] = v.split("-").map(N.num);
+    const diff = a-b;
+    diffSum += diff;
+    scores.push(diff);
+  });
+
+  const avg = diffSum / list.length;
+  const absAvg = Math.abs(avg);
+
+  /* Semakin acak hasil H2H, semakin chaotic */
+  let variance = 0;
+  scores.forEach(s=>{
+    variance += Math.pow(s-avg,2);
+  });
+  variance /= list.length;
+  const chaos = N.clamp((variance*2)+4, 0,10);
+
+  /* Margin dominasi */
+  const margin = N.clamp(absAvg*2.5,0,10);
+
+  /* Stability = kebalikan chaos */
+  const stability = N.clamp(10 - chaos, 0,10);
+
+  let trend = 0;
+  if(avg > 0) trend = 1;     // Home lebih sering unggul
+  else if(avg < 0) trend = -1;
+
+  return {
+    chaos,
+    margin,
+    stability,
+    trend
+  };
+}
+
+/* ===========================================================
+   8. MASTER CONTEXT ENGINE v200
+=========================================================== */
+function ContextEngine_v200(ctxRaw){
+  const liga = ctxRaw.league || "default";
+  const base = LIGA_PROFILE[liga] || LIGA_PROFILE["default"];
+
+  /* Auto liga */
+  let tempo = base.tempo;
+  let strict= base.strict;
+  let chaos = base.chaos;
+
+  /* Weather */
+  const w = weatherImpact(ctxRaw.weather);
+  tempo += w.tempo;
+  chaos += w.chaos;
+
+  /* Importance */
+  const imp = importanceImpact(ctxRaw.mode);
+  tempo += imp.tempo;
+  chaos += imp.chaos;
+  const risk = imp.risk;
+
+  /* Pitch */
+  const p = pitchImpact(ctxRaw.pitch);
+  tempo += p.speed;
+  chaos += p.chaos;
+
+  /* Travel */
+  const t = travelImpact(ctxRaw.mode);
+  const fatigue = t.fatigue;
+
+  /* Crowd */
+  const c = crowdImpact();
+
+  /* H2H */
+  const h2h = H2HAnalyzer(ctxRaw.h2h);
+
+  /* Combine */
+  return {
+    tempo:   N.clamp(tempo, 1,10),
+    strict:  N.clamp(strict,1,10),
+    chaos:   N.clamp(chaos, 1,10),
+    risk:    N.clamp(risk + (10-h2h.stability)/3, 1,10),
+    fatigue: fatigue,
+    crowd:   c,
+    h2h:     h2h
+  };
+}
+
+/* EXPORT */
+global.V200.Context = ContextEngine_v200;
+
+})(window);
+</script>
+<script>
+/* ===========================================================
+   v200 GODMODE — PART 7
+   MONTE CARLO + MULTI SCENARIO v200
+   Input:  omegaResult (V200.Omega),
+           contextResult (V200.Context)
+   Output: Base / Low / High / Extreme skenario
+=========================================================== */
+(function(global){
+"use strict";
+const N = global.V200;
+
+/* ================== HELPER: CDF & SAMPLING ================= */
+function buildCDF(lambda, maxG){
+  const cdf = [];
+  let cum = 0;
+  for(let k=0;k<=maxG;k++){
+    const p = N.poisson(lambda,k);
+    cum += p;
+    cdf.push(cum);
+  }
+  if(cdf[cdf.length-1] < 0.9999){
+    cdf[cdf.length-1] = 1;
+  }
+  return cdf;
+}
+
+function sampleFromCDF(cdf){
+  const u = Math.random();
+  for(let i=0;i<cdf.length;i++){
+    if(u <= cdf[i]) return i;
+  }
+  return cdf.length-1;
+}
+
+/* ============ HELPER: ANALYTIC POISSON (1X2, OU, BTTS) ============ */
+function analytic3Way(lambdaH, lambdaA, maxG){
+  let pH=0,pD=0,pA=0;
+  for(let i=0;i<=maxG;i++){
+    for(let j=0;j<=maxG;j++){
+      const p = N.poisson(lambdaH,i) * N.poisson(lambdaA,j);
+      if(i>j) pH += p;
+      else if(i===j) pD += p;
+      else pA += p;
+    }
+  }
+  return {pH,pD,pA};
+}
+
+function analyticOU(lambdaH, lambdaA, line, maxG){
+  let over=0,under=0;
+  for(let i=0;i<=maxG;i++){
+    for(let j=0;j<=maxG;j++){
+      const p = N.poisson(lambdaH,i) * N.poisson(lambdaA,j);
+      const sum = i+j;
+      if(sum > line) over += p;
+      else under += p;
+    }
+  }
+  return {over,under};
+}
+
+function analyticBTTS(lambdaH, lambdaA, maxG){
+  let yes=0,no=0;
+  for(let i=0;i<=maxG;i++){
+    for(let j=0;j<=maxG;j++){
+      const p = N.poisson(lambdaH,i) * N.poisson(lambdaA,j);
+      if(i>0 && j>0) yes += p;
+      else no += p;
+    }
+  }
+  return {yes,no};
+}
+
+function analyticTopScores(lambdaH, lambdaA, maxG){
+  const arr=[];
+  for(let i=0;i<=maxG;i++){
+    for(let j=0;j<=maxG;j++){
+      const p = N.poisson(lambdaH,i) * N.poisson(lambdaA,j);
+      arr.push({score:`${i}-${j}`,prob:p});
+    }
+  }
+  arr.sort((a,b)=>b.prob-a.prob);
+  return arr.slice(0,8);
+}
+
+/* ================= MONTE CARLO 1 SKENARIO ================== */
+function runMonteCarlo(lambdaH, lambdaA, runs, maxG){
+  const Nsim   = runs || 10000;
+  const capG   = maxG || 8;
+
+  const cdfH = buildCDF(lambdaH,capG);
+  const cdfA = buildCDF(lambdaA,capG);
+
+  let sumH=0,sumA=0;
+  let winH=0,winA=0,draw=0;
+  let over15=0,over25=0,over35=0,over45=0;
+  let bttsY=0,bttsN=0;
+  const freq = {};
+
+  for(let n=0;n<Nsim;n++){
+    const gH = sampleFromCDF(cdfH);
+    const gA = sampleFromCDF(cdfA);
+    sumH += gH;
+    sumA += gA;
+
+    if(gH>gA) winH++; else if(gH<gA) winA++; else draw++;
+
+    const total = gH+gA;
+    if(total>1.5) over15++;
+    if(total>2.5) over25++;
+    if(total>3.5) over35++;
+    if(total>4.5) over45++;
+
+    if(gH>0 && gA>0) bttsY++; else bttsN++;
+
+    const key = gH+"-"+gA;
+    freq[key] = (freq[key] || 0) + 1;
+  }
+
+  const scores = Object.keys(freq).map(k=>({
+    score:k,
+    prob: freq[k]/Nsim
+  })).sort((a,b)=>b.prob-a.prob).slice(0,8);
+
+  return {
+    runs   : Nsim,
+    avgH   : sumH/Nsim,
+    avgA   : sumA/Nsim,
+    pH     : winH/Nsim,
+    pD     : draw/Nsim,
+    pA     : winA/Nsim,
+    ou     : {
+      "1.5": over15/Nsim,
+      "2.5": over25/Nsim,
+      "3.5": over35/Nsim,
+      "4.5": over45/Nsim
+    },
+    btts   : {
+      yes: bttsY/Nsim,
+      no : bttsN/Nsim
+    },
+    scores : scores
+  };
+}
+
+/* ===================== LAMBDA SCENARIO BUILDER ===================== */
+function buildScenarioLambda(omegaLambda, ctx){
+  const baseH = N.clamp(omegaLambda.H,0.05,5.0);
+  const baseA = N.clamp(omegaLambda.A,0.05,5.0);
+
+  const tempo = sNorm(ctx.tempo || 6.5);
+  const chaos = sNorm(ctx.chaos || 6.0);
+  const risk  = sNorm(ctx.risk  || 5.0);
+
+  // Faktor skala dasar context
+  let scaleBase = 1 +
+    (tempo-0.65)*0.12 +
+    (chaos-0.6)*0.10 +
+    (risk -0.5)*0.06;
+
+  scaleBase = N.clamp(scaleBase,0.75,1.35);
+
+  const lamBaseH = N.clamp(baseH * scaleBase,0.05,5.0);
+  const lamBaseA = N.clamp(baseA * scaleBase,0.05,5.0);
+
+  // Low-event: lebih tertutup
+  const lowFactor = N.clamp(1 - 0.20 - (chaos*0.15),0.45,0.95);
+  // High-event: lebih terbuka
+  const highFactor = N.clamp(1 + 0.20 + (chaos*0.20),1.05,1.80);
+  // Extreme-event: chaos tinggi sekali
+  const extFactor = N.clamp(highFactor + chaos*0.15,1.10,2.20);
+
+  return {
+    base : { H: lamBaseH,         A: lamBaseA },
+    low  : { H: lamBaseH*lowFactor,  A: lamBaseA*lowFactor },
+    high : { H: lamBaseH*highFactor, A: lamBaseA*highFactor },
+    extreme: { H: lamBaseH*extFactor, A: lamBaseA*extFactor }
+  };
+}
+
+/* Normalisasi 1–10 → 0–1 */
+function sNorm(v){
+  return N.clamp(N.num(v),1,10)/10;
+}
+
+/* =================== SCENARIO SUMMARY ANALYTIC ===================== */
+function scenarioAnalytic(lambdaH, lambdaA){
+  const p3   = analytic3Way(lambdaH,lambdaA,10);
+  const ou25 = analyticOU(lambdaH,lambdaA,2.5,10);
+  const bt   = analyticBTTS(lambdaH,lambdaA,10);
+  return {
+    lambdaH, lambdaA,
+    p3,
+    ou25,
+    btts: bt,
+    topScores: analyticTopScores(lambdaH,lambdaA,6)
+  };
+}
+
+/* =================== MASTER SIM ENGINE v200 ======================== */
+/*
+  Input:
+  {
+    omega   : V200.Omega(...) result,
+    context : V200.Context(...) result,
+    tactical: V200.Tactical(...) result (opsional)
+  }
+*/
+function SimEngine_v200(pkg){
+  const omega   = pkg.omega;
+  const ctx     = pkg.context;
+
+  const scenLam = buildScenarioLambda(omega.lambda, ctx);
+
+  const out = {};
+
+  // looping 4 skenario
+  ["base","low","high","extreme"].forEach(name=>{
+    const L = scenLam[name];
+    const analytic = scenarioAnalytic(L.H,L.A);
+    const mc       = runMonteCarlo(L.H,L.A,10000,8);
+
+    out[name] = {
+      lambdaH : L.H,
+      lambdaA : L.A,
+      analytic: analytic,
+      mc      : mc
+    };
+  });
+
+  return {
+    scenarios: out,
+    context : ctx,
+    omega   : omega
+  };
+}
+
+/* EXPORT */
+global.V200.Sim = SimEngine_v200;
+
+})(window);
+</script>
+<script>
+/* ===========================================================
+   v200 GODMODE — PART 8
+   OUTPUT TEXT BUILDER v200
+   Mengubah hasil Omega + Tactical + Context + Sim
+   → laporan teks lengkap (tanpa DOM).
+=========================================================== */
+(function(global){
+"use strict";
+const N = global.V200;
+
+function pct(x){
+  if(isNaN(x)) return "-";
+  return (x*100).toFixed(1)+"%";
+}
+function dec(x,d){
+  if(isNaN(x)) return "-";
+  return x.toFixed(d==null?3:d);
+}
+function d2(x){ return dec(x,2); }
+
+/* ===========================================================
+   1. Reliability & Risk Index v200
+=========================================================== */
+function calcReliability(input, ctx, omega, simPkg){
+  const h = input.home;
+  const a = input.away;
+  const h2h = ctx.h2h || {stability:5};
+  const tempo = ctx.tempo || 6.5;
+
+  function relTeam(t){
+    const stab   = N.clamp(N.num(t.stab),1,10);
+    const avail  = N.clamp(N.num(t.avail),0,100)/10;
+    const gk     = N.clamp(N.num(t.gk),1,10);
+    const form   = N.clamp(N.num(t.form),1,10);
+
+    let r = stab*0.35 + (avail)*0.15 + gk*0.25 + form*0.25;
+    return N.clamp(r/1.5,1,10);
+  }
+
+  const relH = relTeam(h);
+  const relA = relTeam(a);
+
+  let risk = N.clamp(
+    (ctx.chaos||6)*0.35 +
+    (ctx.risk||5)*0.35 +
+    (10-h2h.stability)*0.20 +
+    (Math.abs(tempo-6.5))*0.10,
+    1,10
+  );
+
+  const globRel = N.clamp(
+    (relH+relA)/2 - (risk-5)*0.4,
+    1,10
+  );
+
+  return {
+    team: {H:relH,A:relA},
+    match_risk: risk,
+    match_reliability: globRel
+  };
+}
+
+/* ===========================================================
+   2. Match Profile Line
+=========================================================== */
+function makeProfileLine(input, ctx, omega, tactical){
+  const hName = input.home.name || "HOME";
+  const aName = input.away.name || "AWAY";
+
+  let modeTxt = "League";
+  switch(ctx.mode){
+    case "cup":        modeTxt = "Domestic Cup"; break;
+    case "ucl":        modeTxt = "UCL/UEL";      break;
+    case "derby":      modeTxt = "Derby";        break;
+    case "final":      modeTxt = "Final";        break;
+    case "title":      modeTxt = "Title race";   break;
+    case "relegation": modeTxt = "Relegation";   break;
+    case "intl":       modeTxt = "International";break;
+    case "friendly":   modeTxt = "Friendly";     break;
+  }
+
+  let chaosTxt = "balanced";
+  if(ctx.chaos>=7) chaosTxt="high variance";
+  else if(ctx.chaos<=4) chaosTxt="structured";
+
+  let tempoTxt = "moderate";
+  if(ctx.tempo>=7) tempoTxt="fast / intense";
+  else if(ctx.tempo<=4) tempoTxt="slow / controlled";
+
+  let ctrlTxt = "balanced";
+  if(tactical.control_profile.side==="home") ctrlTxt="Home slight control edge";
+  else if(tactical.control_profile.side==="away") ctrlTxt="Away slight control edge";
+
+  return `${hName} vs ${aName}
+Mode: ${modeTxt}
+League: ${ctx.league || "-"}
+Tempo: ${tempoTxt} (${d2(ctx.tempo||6.5)}) · Chaos: ${chaosTxt} (${d2(ctx.chaos||6)})
+Control tendency: ${ctrlTxt}
+Ref strictness: ${d2(ctx.strict||6)} · Risk context: ${d2(ctx.risk||5)}
+`;
+}
+
+/* ===========================================================
+   3. Omega Block (Phase + Atk/Def + Chain)
+=========================================================== */
+function makeOmegaBlock(omega){
+  const ph = omega.phase;
+  const atk= omega.attack;
+  const def= omega.defense;
+  const ch = omega.chain;
+  const lam= omega.lambda;
+
+  return (
+`=== Omega Engine v200 — Phase & Strength ===
+
+Phase (0–1 skala, makin besar makin kuat):
+
+Home Phases:
+  Build      : ${d2(ph.H.build)}
+  Progress   : ${d2(ph.H.progress)}
+  Creation   : ${d2(ph.H.creation)}
+  Conversion : ${d2(ph.H.conversion)}
+  Protection : ${d2(ph.H.protection)}
+
+Away Phases:
+  Build      : ${d2(ph.A.build)}
+  Progress   : ${d2(ph.A.progress)}
+  Creation   : ${d2(ph.A.creation)}
+  Conversion : ${d2(ph.A.conversion)}
+  Protection : ${d2(ph.A.protection)}
+
+Attack Strength:
+  Home : ${d2(atk.H)}    (0–1)
+  Away : ${d2(atk.A)}    (0–1)
+
+Defense Strength:
+  Home : ${d2(def.H)}    (0–1, makin tinggi makin solid)
+  Away : ${d2(def.A)}    (0–1)
+
+Threat Chain (Attack × Phase Chain):
+  Home Threat Chain : ${d2(ch.H)}
+  Away Threat Chain : ${d2(ch.A)}
+
+Lambda dasar (Expected Goals sebelum context v200):
+  λ Home : ${d2(lam.H)}
+  λ Away : ${d2(lam.A)}
+
+`
+  );
+}
+
+/* ===========================================================
+   4. Tactical Block
+=========================================================== */
+function makeTacticalBlock(tac){
+  const p = tac.press_vs_build;
+  const lb= tac.lowblock_vs_break;
+  const tv= tac.trans_vulnerability;
+  const w = tac.width_profile;
+  const c = tac.control_profile;
+
+  let txt = 
+`=== Tactical Brain v200 — Match-up Summary ===
+
+Press vs Build-up (0–10):
+  Home under press : ${d2(p.home_under_press)} 
+  Away under press : ${d2(p.away_under_press)}
+
+Low Block vs Breaking:
+  Home vs Low Block : ${d2(lb.home_break_lowblock)} (kemampuan Home membongkar low block lawan)
+  Away vs Low Block : ${d2(lb.away_break_lowblock)}
+
+Transition Vulnerability:
+  Home vuln  : ${d2(tv.home_vuln_trans)}
+  Away vuln  : ${d2(tv.away_vuln_trans)}
+
+Width vs Central (0–10):
+  Home Wide   : ${d2(w.home.wide)}   · Central: ${d2(w.home.central)}
+  Away Wide   : ${d2(w.away.wide)}   · Central: ${d2(w.away.central)}
+
+Control Profile:
+  Home control : ${d2(c.home)}
+  Away control : ${d2(c.away)}
+  Side         : ${c.side} (delta ${d2(c.delta)})
+`;
+
+  if(tac.notes && tac.notes.length){
+    txt += "\nKey Tactical Notes:\n";
+    tac.notes.forEach(n=>{
+      txt += "  - "+n+"\n";
+    });
+  }
+
+  txt += "\n";
+  return txt;
+}
+
+/* ===========================================================
+   5. Context & H2H Block
+=========================================================== */
+function makeContextBlock(ctx){
+  const h2h = ctx.h2h || {};
+  const crowd = ctx.crowd || {};
+
+  return (
+`=== Context v200 — Liga, Cuaca, H2H ===
+
+Liga Profil (Auto):
+  Tempo   : ${d2(ctx.tempo||6.5)} (1–10)
+  Chaos   : ${d2(ctx.chaos||6.0)}
+  Strict  : ${d2(ctx.strict||6.0)}
+  Risk    : ${d2(ctx.risk||5.0)}
+
+H2H Analyzer:
+  Stability : ${d2(h2h.stability||5)}
+  Chaos     : ${d2(h2h.chaos||5)}
+  Margin    : ${d2(h2h.margin||0)}
+  Trend     : ${h2h.trend===1?"Home lebih dominan":(h2h.trend===-1?"Away lebih dominan":"Seimbang / tidak jelas")}
+
+Crowd / Fatigue:
+  Home crowd boost (approx) : ${d2(crowd.home_boost||0)}
+  Pressure (mental)         : ${d2(crowd.pressure||0)}
+  Fatigue (travel / congest): ${d2(ctx.fatigue||0)}
+
+`
+  );
+}
+
+/* ===========================================================
+   6. Scenario Block (Base / Low / High / Extreme)
+=========================================================== */
+function makeScenarioBlock(sim){
+  const sc = sim.scenarios;
+
+  function one(name, title){
+    const s = sc[name];
+    const an = s.analytic;
+    const mc = s.mc;
+    const p3 = an.p3;
+    const ou = an.ou25;
+    const bt = an.btts;
+
+    let txt =
+`[${title}] — λ H/A = ${d2(s.lambdaH)} / ${d2(s.lambdaA)}
+
+Analytic (Poisson):
+  1X2     : Home ${pct(p3.pH)} · Draw ${pct(p3.pD)} · Away ${pct(p3.pA)}
+  O/U 2.5 : Over ${pct(ou.over)} · Under ${pct(ou.under)}
+  BTTS    : Yes ${pct(bt.yes)} · No ${pct(bt.no)}
+
+Top Scoreline (Analytic):
+`;
+
+    an.topScores.forEach(ss=>{
+      txt += `  - ${ss.score} (${pct(ss.prob)})\n`;
+    });
+
+    txt += `
+Monte Carlo (10.000 simulasi):
+  Avg gol: Home ${d2(mc.avgH)} · Away ${d2(mc.avgA)}
+  1X2    : Home ${pct(mc.pH)} · Draw ${pct(mc.pD)} · Away ${pct(mc.pA)}
+  O/U 2.5: Over ${pct(mc.ou["2.5"])} · Under ${pct(1-mc.ou["2.5"])}
+  BTTS   : Yes ${pct(mc.btts.yes)} · No ${pct(mc.btts.no)}
+
+Top Scoreline (MC):
+`;
+    mc.scores.forEach(ss=>{
+      txt += `  - ${ss.score} (${pct(ss.prob)})\n`;
+    });
+
+    txt += "\n";
+    return txt;
+  }
+
+  let out =
+`=== Scenario v200 — Multi Mode Tanpa Condong ===
+
+`;
+
+  out += one("base","BASE (normal)");
+  out += one("low","LOW-EVENT (lebih tertutup)");
+  out += one("high","HIGH-EVENT (lebih terbuka)");
+  out += one("extreme","EXTREME (sangat terbuka / chaos tinggi)");
+
+  return out;
+}
+
+/* ===========================================================
+   7. Reliability & Risk Block
+=========================================================== */
+function makeIndexBlock(idx){
+  return (
+`=== Reliability • Risk Index v200 ===
+
+Reliability (1–10, makin besar makin stabil):
+  Home : ${d2(idx.team.H)}
+  Away : ${d2(idx.team.A)}
+
+Match Risk Index (1–10):
+  Risk : ${d2(idx.match_risk)}
+
+Match Reliability Global (1–10):
+  Reliability : ${d2(idx.match_reliability)}
+
+Catatan:
+  • Risk tinggi → hasil bisa lebih mudah bergeser dari prediksi.
+  • Reliability tinggi → data & profil tim relatif konsisten.
+`
+  );
+}
+
+/* ===========================================================
+   8. FULL REPORT BUILDER
+=========================================================== */
+/*
+  Input:
+  {
+    input   : {home:..., away:...},
+    ctxRaw  : {... raw fields ...},
+    context : V200.Context(ctxRaw),
+    omega   : V200.Omega(...),
+    tactical: V200.Tactical(...),
+    sim     : V200.Sim(...)
+  }
+*/
+function buildReport_v200(pkg){
+
+  const profile  = makeProfileLine(pkg.input, pkg.context, pkg.omega, pkg.tactical);
+  const omegaTxt = makeOmegaBlock(pkg.omega);
+  const tacTxt   = makeTacticalBlock(pkg.tactical);
+  const ctxTxt   = makeContextBlock(pkg.context);
+  const scenTxt  = makeScenarioBlock(pkg.sim);
+  const idxObj   = calcReliability(pkg.input, pkg.context, pkg.omega, pkg.sim);
+  const idxTxt   = makeIndexBlock(idxObj);
+
+  const report =
+profile + "\n" +
+omegaTxt + "\n" +
+tacTxt + "\n" +
+ctxTxt + "\n" +
+scenTxt + "\n" +
+idxTxt + "\n" +
+`NOTE:
+Engine v200 GODMODE bersifat netral:
+  • Tidak menggunakan odds (murni statistik & konteks).
+  • Tidak diarahkan khusus ke Home/Away atau Over/Under.
+  • Output ini adalah interpretasi probabilistik dari data yang diinput.`;
+
+  return {
+    text: report,
+    index: idxObj
+  };
+}
+
+/* EXPORT */
+global.V200.Report = buildReport_v200;
+
+})(window);
+</script>
+<script>
+/* ===========================================================
+   v200 GODMODE — PART 9
+   VISUAL BASIC PACK:
+   Radar • Wave • Heatline • Bars • Chaos • Dials • Score Wheel
+=========================================================== */
+(function(global){
+"use strict";
+const N = global.V200 || {};
+
+function mapVal(v,inMin,inMax,outMin,outMax){
+  v = N.num(v);
+  if(inMax===inMin) return outMin;
+  return outMin + ( (v-inMin)/(inMax-inMin) )*(outMax-outMin);
+}
+
+/* ===========================================================
+   RADAR CHART
+=========================================================== */
+function drawRadar(canvas, cfg){
+  if(!canvas) return;
+  const ctx = canvas.getContext("2d");
+  if(!ctx) return;
+
+  const w = canvas.width;
+  const h = canvas.height;
+  ctx.clearRect(0,0,w,h);
+
+  const cx = w/2, cy = h/2;
+  const R  = Math.min(w,h)/2.4;
+
+  const keys = cfg.labels;
+  const vals = cfg.values;
+  const angleStep = (Math.PI*2)/keys.length;
+
+  ctx.strokeStyle = "#333";
+  ctx.lineWidth   = 1;
+
+  // web background
+  for(let r=1;r<=5;r++){
+    ctx.beginPath();
+    for(let i=0;i<keys.length;i++){
+      const ang = i*angleStep - Math.PI/2;
+      const rr  = (R/5)*r;
+      const x   = cx + rr*Math.cos(ang);
+      const y   = cy + rr*Math.sin(ang);
+      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.closePath();
+    ctx.stroke();
+  }
+
+  // labels
+  ctx.fillStyle = "#9ca3af";
+  ctx.font      = "11px sans-serif";
+  for(let i=0;i<keys.length;i++){
+    const ang = i*angleStep - Math.PI/2;
+    const x   = cx + (R+15)*Math.cos(ang);
+    const y   = cy + (R+15)*Math.sin(ang);
+    ctx.fillText(keys[i], x-12, y+4);
+  }
+
+  // data poly
+  ctx.beginPath();
+  ctx.strokeStyle = cfg.color || "#4cc0ff";
+  ctx.lineWidth   = 2;
+  for(let i=0;i<vals.length;i++){
+    const ang = i*angleStep - Math.PI/2;
+    const r   = mapVal(vals[i],0,10,0,R);
+    const x   = cx + r*Math.cos(ang);
+    const y   = cy + r*Math.sin(ang);
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  }
+  ctx.closePath();
+  ctx.stroke();
+}
+
+/* ===========================================================
+   WAVE MOMENTUM (Home / Away)
+=========================================================== */
+function drawWave(canvas, homeWave, awayWave){
+  if(!canvas) return;
+  const ctx = canvas.getContext("2d");
+  if(!ctx) return;
+
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0,0,w,h);
+
+  const mid = h/2;
+  ctx.strokeStyle = "#4b5563";
+  ctx.lineWidth   = 1;
+  ctx.beginPath();
+  ctx.moveTo(0,mid);
+  ctx.lineTo(w,mid);
+  ctx.stroke();
+
+  const Npts = 90;
+  const amp  = h/2.5;
+
+  // Home - atas
+  ctx.strokeStyle = "#3b82f6";
+  ctx.lineWidth   = 2;
+  ctx.beginPath();
+  for(let i=0;i<=Npts;i++){
+    const t = i/Npts;
+    const wave = homeWave;
+    const y   = mid - mapVal(wave,1,10,0,amp);
+    const x   = t*w;
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  }
+  ctx.stroke();
+
+  // Away - bawah
+  ctx.strokeStyle = "#f97373";
+  ctx.beginPath();
+  for(let i=0;i<=Npts;i++){
+    const t = i/Npts;
+    const wave = awayWave;
+    const y   = mid + mapVal(wave,1,10,0,amp);
+    const x   = t*w;
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  }
+  ctx.stroke();
+}
+
+/* ===========================================================
+   HEATLINE BALANCE (Home minus Away)
+=========================================================== */
+function drawHeatline(canvas, balance){
+  if(!canvas) return;
+  const ctx = canvas.getContext("2d");
+  if(!ctx) return;
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0,0,w,h);
+
+  const mid = w/2;
+  const barH = h*0.4;
+  const top  = (h-barH)/2;
+
+  ctx.fillStyle = "#111827";
+  ctx.fillRect(0,top,w,barH);
+
+  const x = mapVal(balance,-10,10,0,w);
+  const col = balance>=0 ? "#3b82f6" : "#f97373";
+  ctx.fillStyle = col;
+  if(balance>=0){
+    ctx.fillRect(mid,top,x-mid,barH);
+  } else {
+    ctx.fillRect(x,top,mid-x,barH);
+  }
+
+  ctx.strokeStyle = "#6b7280";
+  ctx.beginPath();
+  ctx.moveTo(mid,top);
+  ctx.lineTo(mid,top+barH);
+  ctx.stroke();
+}
+
+/* ===========================================================
+   STRENGTH BARS: Attack / Defense
+=========================================================== */
+function drawBar(canvas, homeVal, awayVal, label){
+  if(!canvas) return;
+  const ctx = canvas.getContext("2d");
+  if(!ctx) return;
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0,0,w,h);
+
+  const maxVal = Math.max(homeVal,awayVal,1);
+
+  const segH = h/3;
+
+  // Home (atas)
+  ctx.fillStyle = "#3b82f6";
+  ctx.fillRect(0,0,mapVal(homeVal,0,maxVal,0,w),segH);
+
+  // Away (bawah)
+  ctx.fillStyle = "#f97373";
+  ctx.fillRect(0,segH*2,mapVal(awayVal,0,maxVal,0,w),segH);
+
+  ctx.fillStyle = "#e5e7eb";
+  ctx.font      = "11px sans-serif";
+  ctx.fillText(
+    label+" H/A: "+homeVal.toFixed(2)+" / "+awayVal.toFixed(2),
+    6, segH*1.6
+  );
+}
+
+/* ===========================================================
+   CHAOS BAR (1–10)
+=========================================================== */
+function drawChaosBar(canvas, chaos){
+  if(!canvas) return;
+  const ctx = canvas.getContext("2d");
+  if(!ctx) return;
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0,0,w,h);
+
+  const barH = h*0.5;
+  const top  = (h-barH)/2;
+  ctx.fillStyle = "#111827";
+  ctx.fillRect(0,top,w,barH);
+
+  const x = mapVal(chaos,1,10,0,w);
+  const col = chaos>=6 ? "#f97316" : "#3b82f6";
+  ctx.fillStyle = col;
+  ctx.fillRect(0,top,x,barH);
+}
+
+/* ===========================================================
+   DIAL (Reliability / Risk)
+=========================================================== */
+function drawDial(canvas,val,color){
+  if(!canvas) return;
+  const ctx = canvas.getContext("2d");
+  if(!ctx) return;
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0,0,w,h);
+
+  const cx = w/2, cy = h*0.7;
+  const r  = Math.min(w,h)/2.3;
+
+  ctx.strokeStyle = "#374151";
+  ctx.lineWidth   = 3;
+  ctx.beginPath();
+  ctx.arc(cx,cy,r,Math.PI,0,false);
+  ctx.stroke();
+
+  const norm = mapVal(val,1,10,0,1); // 0..1
+  const ang  = Math.PI - norm*Math.PI; // from left (π) to right (0)
+  const x    = cx + r*Math.cos(ang);
+  const y    = cy + r*Math.sin(ang);
+
+  ctx.strokeStyle = color || "#4cc0ff";
+  ctx.lineWidth   = 4;
+  ctx.beginPath();
+  ctx.moveTo(cx,cy);
+  ctx.lineTo(x,y);
+  ctx.stroke();
+
+  ctx.fillStyle = "#d1d5db";
+  ctx.font      = "11px sans-serif";
+  ctx.fillText("Val: "+val.toFixed(2),cx-20,cy+16);
+}
+
+/* ===========================================================
+   SCORE WHEEL (top 8 skor)
+=========================================================== */
+function drawScoreWheel(canvas, scores){
+  if(!canvas) return;
+  const ctx = canvas.getContext("2d");
+  if(!ctx) return;
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0,0,w,h);
+
+  if(!scores || !scores.length) return;
+
+  const cx = w*0.6, cy = h/2;
+  const r  = Math.min(w,h)/2.4;
+
+  const seg = scores.length;
+  const step= (Math.PI*2)/seg;
+
+  for(let i=0;i<seg;i++){
+    const ang1 = i*step;
+    const ang2 = (i+1)*step;
+    const p    = scores[i].prob || 0;
+    const inten = mapVal(p,0,0.25,0.1,1);
+    const g = 180 + Math.floor(inten*75);
+
+    ctx.fillStyle = `rgb(${255-g},${g},160)`;
+    ctx.beginPath();
+    ctx.moveTo(cx,cy);
+    ctx.arc(cx,cy,r,ang1,ang2);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  ctx.fillStyle = "#e5e7eb";
+  ctx.font      = "11px sans-serif";
+  let ty = 14;
+  for(let i=0;i<seg;i++){
+    const s = scores[i];
+    ctx.fillText(`${s.score} (${(s.prob*100).toFixed(1)}%)`, 6, ty);
+    ty += 13;
+  }
+}
+
+/* ===========================================================
+   MAIN ENTRY: V200.VisualBasic(pkg)
+=========================================================== */
+/*
+  pkg:
+  {
+    input,
+    omega,
+    context,
+    tactical,
+    sim,
+    report,  // hasil V200.Report(...)
+    index    // optional, dari report.index
+  }
+*/
+function VisualBasic_v200(pkg){
+  const omega   = pkg.omega;
+  const ctx     = pkg.context;
+  const tact    = pkg.tactical;
+  const sim     = pkg.sim;
+  const idx     = pkg.index || (pkg.report ? pkg.report.index : null);
+
+  /* Radar Home/Away */
+  const labels = ["Build","Prog","Create","Conv","Protect","Atk","Def"];
+  const ph = omega.phase;
+  const atk= omega.attack;
+  const def= omega.defense;
+
+  const radarHomeVals = [
+    ph.H.build*10,
+    ph.H.progress*10,
+    ph.H.creation*10,
+    ph.H.conversion*10,
+    ph.H.protection*10,
+    atk.H*10,
+    def.H*10
+  ];
+  const radarAwayVals = [
+    ph.A.build*10,
+    ph.A.progress*10,
+    ph.A.creation*10,
+    ph.A.conversion*10,
+    ph.A.protection*10,
+    atk.A*10,
+    def.A*10
+  ];
+
+  drawRadar(
+    document.getElementById("radar_home"),
+    {labels:labels,values:radarHomeVals,color:"#4cc0ff"}
+  );
+  drawRadar(
+    document.getElementById("radar_away"),
+    {labels:labels,values:radarAwayVals,color:"#fb7185"}
+  );
+
+  /* Wave momentum:
+     gunakan DM15 + wave input sebagai basis
+  */
+  const hWave = N.clamp(N.num(pkg.input.home.dm15 || pkg.input.home.wave || 5),1,10);
+  const aWave = N.clamp(N.num(pkg.input.away.dm15 || pkg.input.away.wave || 5),1,10);
+
+  drawWave(
+    document.getElementById("wave_chart"),
+    hWave,
+    aWave
+  );
+
+  /* Heatline balance:
+     combine chain threat + control delta
+  */
+  const chain   = omega.chain;
+  const ctrl    = tact.control_profile || {delta:0};
+  const balance = (chain.H-chain.A)*7 + (ctrl.delta||0);
+
+  drawHeatline(
+    document.getElementById("heatline"),
+    N.clamp(balance,-10,10)
+  );
+
+  /* Attack / Defense bars */
+  drawBar(
+    document.getElementById("bar_atk"),
+    atk.H*10,
+    atk.A*10,
+    "Attack Strength"
+  );
+  drawBar(
+    document.getElementById("bar_def"),
+    def.H*10,
+    def.A*10,
+    "Defense Strength"
+  );
+
+  /* Chaos bar */
+  drawChaosBar(
+    document.getElementById("chaos_bar"),
+    ctx.chaos || 6
+  );
+
+  /* Dials */
+  if(idx){
+    drawDial(
+      document.getElementById("dial_relH"),
+      idx.team.H || 5,
+      "#3b82f6"
+    );
+    drawDial(
+      document.getElementById("dial_relA"),
+      idx.team.A || 5,
+      "#f97373"
+    );
+    drawDial(
+      document.getElementById("dial_risk"),
+      idx.match_risk || 5,
+      "#f97316"
+    );
+  }
+
+  /* Score wheel pakai skenario BASE → top skor MC */
+  const baseSc = sim.scenarios.base;
+  const wheelScores = baseSc.mc.scores || baseSc.analytic.topScores || [];
+  drawScoreWheel(
+    document.getElementById("score_wheel"),
+    wheelScores
+  );
+}
+
+/* EXPORT */
+global.V200.VisualBasic = VisualBasic_v200;
+
+})(window);
+</script>
+<script>
+/* ===========================================================
+   v200 GODMODE — PART 10
+   VISUAL EXTRA PACK:
+   Zone Threat • Passing Flow • Chaos Mesh • Defensive Heat •
+   Attack Flow Vector
+=========================================================== */
+(function(global){
+"use strict";
+const N = global.V200 || {};
+
+function mapVal(v,inMin,inMax,outMin,outMax){
+  v = N.num(v);
+  if(inMax===inMin) return outMin;
+  return outMin + ( (v-inMin)/(inMax-inMin) )*(outMax-outMin);
+}
+
+/* ===========================================================
+   ZONE THREAT MAP v200 (9 zona)
+=========================================================== */
+function drawZoneThreat(canvas, input, omega, tactical){
+  if(!canvas) return;
+  const ctx = canvas.getContext("2d");
+  if(!ctx) return;
+
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0,0,w,h);
+
+  const H = input.home;
+  const A = input.away;
+
+  // Base threat pakai chain + final third + xThreat
+  function zoneBase(t, chainVal){
+    const f3  = N.clamp(N.num(t.f3t),1,10);
+    const xT  = N.clamp(N.num(t.xthreat),1,10);
+    const base = chainVal*0.55 + (f3/10)*0.25 + (xT/10)*0.20;
+    return N.clamp(base,0,1);
+  }
+
+  const chain = omega.chain;
+  const zHbase = zoneBase(H, chain.H);
+  const zAbase = zoneBase(A, chain.A);
+
+  // Bagi 3x3 grid
+  const cols = 3, rows = 3;
+  const cw = w/cols, ch = h/rows;
+
+  for(let r=0;r<rows;r++){
+    for(let c=0;c<cols;c++){
+      // zona tengah & zone 14 lebih penting (row=1, col=1)
+      let weight = 1;
+      if(r===1 && c===1) weight = 1.25;        // zone 14
+      else if(r===1 || c===1) weight = 1.1;    // half-space & central
+      else weight = 0.9;
+
+      const hThreat = zHbase*weight;
+      const aThreat = zAbase*weight;
+
+      let diff = hThreat - aThreat;   // >0: Home dominan
+      diff = N.clamp(diff,-0.8,0.8);
+
+      const intensity = Math.abs(diff)/0.8;
+      const alpha = mapVal(intensity,0,1,0.12,0.8);
+
+      const color = diff>=0
+        ? `rgba(76,192,255,${alpha})`
+        : `rgba(248,113,113,${alpha})`;
+
+      ctx.fillStyle = color;
+      ctx.fillRect(c*cw,r*ch,cw,ch);
+    }
+  }
+
+  ctx.strokeStyle = "#4b5563";
+  ctx.lineWidth   = 1;
+  for(let c=0;c<=cols;c++){
+    ctx.beginPath();
+    ctx.moveTo(c*cw,0);
+    ctx.lineTo(c*cw,h);
+    ctx.stroke();
+  }
+  for(let r=0;r<=rows;r++){
+    ctx.beginPath();
+    ctx.moveTo(0,r*ch);
+    ctx.lineTo(w,r*ch);
+    ctx.stroke();
+  }
+}
+
+/* ===========================================================
+   PASSING FLOW MAP (koridor)
+=========================================================== */
+function drawPassFlow(canvas, input, tactical){
+  if(!canvas) return;
+  const ctx = canvas.getContext("2d");
+  if(!ctx) return;
+
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0,0,w,h);
+
+  const H = input.home;
+  const A = input.away;
+
+  // Lane strength menggunakan build + poss_t + pressres + width_profile
+  function laneStrength(t, widthObj){
+    const build  = N.clamp(N.num(t.build),1,10)/10;
+    const possT  = N.clamp(N.num(t.poss_t),1,10)/10;
+    const pressR = N.clamp(N.num(t.pressres),1,10)/10;
+    const wide   = (widthObj.wide || 5)/10;
+    const central= (widthObj.central || 5)/10;
+
+    return {
+      wide: N.clamp(build*0.25 + possT*0.15 + pressR*0.25 + wide*0.35,0,1),
+      central: N.clamp(build*0.30 + possT*0.25 + pressR*0.20 + central*0.25,0,1)
+    };
+  }
+
+  const wProfH = tactical.width_profile.home;
+  const wProfA = tactical.width_profile.away;
+  const laneH  = laneStrength(H,wProfH);
+  const laneA  = laneStrength(A,wProfA);
+
+  const lanes = 5;
+  const lw    = w/lanes;
+
+  for(let i=0;i<lanes;i++){
+    const centerLane = (i===2);
+    const sideLane   = (i===0 || i===4);
+
+    let homeLaneVal, awayLaneVal;
+    if(centerLane){
+      homeLaneVal = laneH.central;
+      awayLaneVal = laneA.central;
+    } else {
+      homeLaneVal = laneH.wide;
+      awayLaneVal = laneA.wide;
+    }
+
+    const diff = N.clamp(homeLaneVal - awayLaneVal,-1,1);
+    const intensity = Math.abs(diff);
+    const alpha = mapVal(intensity,0,1,0.15,0.8);
+    const color = diff>=0
+      ? `rgba(59,130,246,${alpha})`
+      : `rgba(248,113,113,${alpha})`;
+
+    ctx.fillStyle = color;
+    ctx.fillRect(i*lw,0,lw,h);
+  }
+
+  ctx.strokeStyle = "#4b5563";
+  ctx.lineWidth   = 1;
+  for(let i=0;i<=lanes;i++){
+    ctx.beginPath();
+    ctx.moveTo(i*lw,0);
+    ctx.lineTo(i*lw,h);
+    ctx.stroke();
+  }
+}
+
+/* ===========================================================
+   CHAOS MESH (visualisasi variance / chaos)
+=========================================================== */
+function drawChaosMesh(canvas, ctxRes){
+  if(!canvas) return;
+  const ctx = canvas.getContext("2d");
+  if(!ctx) return;
+
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0,0,w,h);
+
+  const chaos = N.clamp(N.num(ctxRes.chaos||6),1,10);
+  const cellsX = 12;
+  const cellsY = 6;
+  const cw = w/cellsX, ch = h/cellsY;
+
+  for(let y=0;y<cellsY;y++){
+    for(let x=0;x<cellsX;x++){
+      const noise = Math.random()*0.6 + 0.4;
+      const val   = (chaos/10)*noise;
+      const alpha = N.clamp(val,0.15,0.95);
+      ctx.fillStyle = `rgba(249,115,22,${alpha})`;
+      ctx.fillRect(x*cw,y*ch,cw,ch);
+    }
+  }
+}
+
+/* ===========================================================
+   DEFENSIVE HEAT / STRESS MESH
+=========================================================== */
+function drawDefHeat(canvas, input, omega, tactical, ctxRes){
+  if(!canvas) return;
+  const ctx = canvas.getContext("2d");
+  if(!ctx) return;
+
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0,0,w,h);
+
+  const H = input.home;
+  const A = input.away;
+
+  const def = omega.defense;
+  const tv  = tactical.trans_vulnerability;
+
+  // Stress: gabung trans vulnerability + konteks chaos
+  function stressTeam(tIsHome){
+    const d      = tIsHome ? def.H : def.A;       // defense strength (0–1)
+    const vuln   = tIsHome ? tv.home_vuln_trans : tv.away_vuln_trans; // 1–10
+    const chaos  = N.clamp(N.num(ctxRes.chaos||6),1,10);
+    const base   = (1-d)*0.5 + (vuln/10)*0.3 + (chaos/10)*0.2;
+    return N.clamp(base,0,1);
+  }
+
+  const stressH = stressTeam(true);   // tekanan pada Home
+  const stressA = stressTeam(false);  // tekanan pada Away
+
+  const gridX = 10, gridY = 5;
+  const gw = w/gridX, gh = h/gridY;
+
+  for(let j=0;j<gridY;j++){
+    for(let i=0;i<gridX;i++){
+      // Barat (dekat gawang Home) vs Timur (dekat gawang Away)
+      const sideFactor = mapVal(i,0,gridX-1,-1,1);
+      let stressVal;
+
+      if(sideFactor < 0){
+        // area Home area sendiri → stress untuk Home
+        stressVal = stressH*(1+Math.abs(sideFactor)*0.5);
+      } else {
+        // area Away area sendiri
+        stressVal = stressA*(1+Math.abs(sideFactor)*0.5);
+      }
+
+      stressVal = N.clamp(stressVal,0,1);
+      const alpha = mapVal(stressVal,0,1,0.1,0.9);
+      const colR  = Math.floor(120 + stressVal*120);
+      const colG  = Math.floor(200 - stressVal*120);
+      const colB  = 255 - Math.floor(stressVal*60);
+
+      ctx.fillStyle = `rgba(${colR},${colG},${colB},${alpha})`;
+      ctx.fillRect(i*gw,j*gh,gw,gh);
+    }
+  }
+}
+
+/* ===========================================================
+   ATTACK FLOW VECTOR
+=========================================================== */
+function drawAttackFlow(canvas, input, omega, tactical, ctxRes){
+  if(!canvas) return;
+  const ctx = canvas.getContext("2d");
+  if(!ctx) return;
+
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0,0,w,h);
+
+  const H = input.home;
+  const A = input.away;
+  const atk= omega.attack;
+  const chain= omega.chain;
+  const ctrl= tactical.control_profile;
+
+  // Attack flow strength ~ attack strength + chain + control
+  function flow(isHome){
+    const atkVal   = isHome ? atk.H : atk.A;
+    const chainVal = isHome ? chain.H : chain.A;
+    const ctrlVal  = isHome ? ctrl.home : ctrl.away;
+    return N.clamp(
+      atkVal*0.4 + chainVal*0.4 + (ctrlVal/10)*0.2,
+      0,1
+    );
+  }
+
+  const fH = flow(true);
+  const fA = flow(false);
+
+  let delta = N.clamp(fH - fA, -1, 1);
+  const cx = w/2, cy = h/2;
+  const baseLen = w*0.2;
+  const extra   = Math.abs(delta)*w*0.25;
+  const len     = baseLen + extra;
+
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = delta>=0 ? "#38bdf8" : "#fb7185";
+
+  ctx.beginPath();
+  if(delta>=0){
+    ctx.moveTo(cx-len,cy);
+    ctx.lineTo(cx+len,cy);
+  } else {
+    ctx.moveTo(cx+len,cy);
+    ctx.lineTo(cx-len,cy);
+  }
+  ctx.stroke();
+
+  ctx.beginPath();
+  if(delta>=0){
+    ctx.moveTo(cx+len,cy);
+    ctx.lineTo(cx+len-15,cy-9);
+    ctx.lineTo(cx+len-15,cy+9);
+  } else {
+    ctx.moveTo(cx-len,cy);
+    ctx.lineTo(cx-len+15,cy-9);
+    ctx.lineTo(cx-len+15,cy+9);
+  }
+  ctx.stroke();
+}
+
+/* ===========================================================
+   MAIN ENTRY: V200.VisualExtra(pkg)
+=========================================================== */
+/*
+  pkg sama dengan VisualBasic:
+  {
+    input,
+    omega,
+    context,
+    tactical,
+    sim,
+    report,
+    index
+  }
+*/
+function VisualExtra_v200(pkg){
+  const zoneCanvas   = document.getElementById("zone_threat");
+  const passCanvas   = document.getElementById("pass_map");
+  const chaosCanvas  = document.getElementById("chaos_mesh");
+  const defCanvas    = document.getElementById("def_heat");
+  const flowCanvas   = document.getElementById("attack_flow");
+
+  if(zoneCanvas){
+    drawZoneThreat(zoneCanvas, pkg.input, pkg.omega, pkg.tactical);
+  }
+  if(passCanvas){
+    drawPassFlow(passCanvas, pkg.input, pkg.tactical);
+  }
+  if(chaosCanvas){
+    drawChaosMesh(chaosCanvas, pkg.context);
+  }
+  if(defCanvas){
+    drawDefHeat(defCanvas, pkg.input, pkg.omega, pkg.tactical, pkg.context);
+  }
+  if(flowCanvas){
+    drawAttackFlow(flowCanvas, pkg.input, pkg.omega, pkg.tactical, pkg.context);
+  }
+}
+
+/* EXPORT */
+global.V200.VisualExtra = VisualExtra_v200;
+
+})(window);
+</script>
+<script>
+/* ===========================================================
+   v200 GODMODE — PART 11
+   AUTO ENGINE (PRO + ELITE + GODMODE)
+   Tujuan: Mengisi otomatis input tim & context
+   tanpa DOM (dipanggil Part 12 bila tombol AUTO ditekan)
+=========================================================== */
+(function(global){
+"use strict";
+const N = global.V200 || {};
+
+/* ===========================================================
+   HELPER SCALE 1–10
+=========================================================== */
+function s10(v){
+  return N.clamp(N.num(v),1,10);
+}
+
+/* ===========================================================
+   1. AUTO FORM ANALYZER (nilai 1–10)
+   input: ["W","D","L","W","L"] dll.
+=========================================================== */
+function autoForm(list){
+  if(!list || !list.length) return 5;
+  let score = 0;
+  const map = {W:3, D:1, L:0};
+  list.slice(0,5).forEach(r=>{
+    score += (map[r]!==undefined ? map[r] : 1);
+  });
+  return s10( (score/15)*10 );
+}
+
+/* ===========================================================
+   2. AUTO DM15 (dangerous moment last 15 min)
+=========================================================== */
+function autoDM15(goalsLate, shotsLate){
+  const g = N.num(goalsLate);
+  const s = N.num(shotsLate);
+  return s10( (g*0.6 + s*0.35) );
+}
+
+/* ===========================================================
+   3. AUTO WAVE (momentum)
+=========================================================== */
+function autoWave(formVal, dm15){
+  return s10( (formVal*0.6 + dm15*0.5)/1.1 );
+}
+
+/* ===========================================================
+   4. AUTO Conversion Efficiency
+=========================================================== */
+function autoConv(goals, shots){
+  const g=N.num(goals), s=N.num(shots);
+  if(s<=0) return 5;
+  const c = (g/s)*10;
+  return s10(c);
+}
+
+/* ===========================================================
+   5. AUTO Press Resistance
+=========================================================== */
+function autoPressRes(passAcc, buildSucc){
+  return s10( (N.num(passAcc)/100)*4 + (N.num(buildSucc)/100)*6 );
+}
+
+/* ===========================================================
+   6. AUTO Shots-on-Target Efficiency
+=========================================================== */
+function autoShotEff(shotOT, totalShot){
+  if(totalShot<=0) return 5;
+  const eff = (shotOT/totalShot)*10;
+  return s10(eff);
+}
+
+/* ===========================================================
+   7. AUTO xThreat surrogate
+=========================================================== */
+function autoXThreat(creation, f3){
+  const c = N.clamp(N.num(creation),1,10);
+  const f = N.clamp(N.num(f3),1,10);
+  return s10( c*0.6 + f*0.5 );
+}
+
+/* ===========================================================
+   8. AUTO Absence impact (GK / DF / MD / FW)
+=========================================================== */
+function autoAbsence(gk,df,md,fw){
+  const g = N.num(gk), d=N.num(df), m=N.num(md), f=N.num(fw);
+  const total = (g*0.35 + d*0.25 + m*0.2 + f*0.2);
+  return s10(10 - total*0.8);
+}
+
+/* ===========================================================
+   9. AUTO Rotation impact
+=========================================================== */
+function autoRotation(level){
+  switch(level){
+    case "heavy": return 4;
+    case "mid":   return 6;
+    case "light": return 8;
+    default:      return 7;
+  }
+}
+
+/* ===========================================================
+   10. AUTO Travel fatigue (khusus international)
+=========================================================== */
+function autoTravel(km){
+  const k = N.num(km);
+  return s10(5 + Math.min(k/8000,1)*5);
+}
+
+/* ===========================================================
+   11. AUTO Context Builder
+=========================================================== */
+function autoContext(raw){
+  const league = raw.league || "default";
+  const mode   = raw.mode   || "league";
+  const weather= raw.weather|| "clear";
+  const pitch  = raw.pitch  || "good";
+
+  return {
+    league,
+    mode,
+    weather,
+    pitch,
+    h2h: raw.h2h || ""
+  };
+}
+
+/* ===========================================================
+   12. AUTO ENGINE MAIN
+=========================================================== */
+/*
+   input:
+   {
+     home: {
+       formList: ["W","L","W","D","W"],
+       goalsLate: 2,
+       shotsLate: 4,
+       goals: 12,
+       shots: 44,
+       passAcc: 82,
+       buildSucc: 76,
+       shotOT: 28,
+       totalShot: 53,
+       creation: 7,
+       f3t: 6,
+       abs: {gk:0,df:1,md:1,fw:0},
+       rotation: "mid",
+       travelKm: 0
+     },
+     away: { ... sama ... },
+     ctxRaw: {league:"Premier League", mode:"league", weather:"rain", pitch:"good", h2h:"2-1,1-1"}
+   }
+*/
+function AutoEngine_v200(raw){
+
+  function procTeam(t){
+    const form = autoForm(t.formList || []);
+    const dm15 = autoDM15(t.goalsLate || 0, t.shotsLate || 0);
+    const wave = autoWave(form,dm15);
+    const conv = autoConv(t.goals,t.shots);
+    const pressres = autoPressRes(t.passAcc,t.buildSucc);
+    const shotEff  = autoShotEff(t.shotOT,t.totalShot);
+    const xT = autoXThreat(t.creation,t.f3t);
+    const abs = autoAbsence(
+      t.abs?.gk || 0,
+      t.abs?.df || 0,
+      t.abs?.md || 0,
+      t.abs?.fw || 0
+    );
+    const rot = autoRotation(t.rotation || "light");
+    const travel = autoTravel(t.travelKm || 0);
+
+    return {
+      form,
+      dm15,
+      wave,
+      conv,
+      pressres,
+      shotEff,
+      xthreat: xT,
+      absence: abs,
+      rotation: rot,
+      travel
+    };
+  }
+
+  return {
+    home: procTeam(raw.home),
+    away: procTeam(raw.away),
+    ctxRaw: autoContext(raw.ctxRaw)
+  };
+}
+
+/* EXPORT */
+global.V200.Auto = AutoEngine_v200;
+
+})(window);
+</script>
+<!-- ===========================================================
+     PART 12 — OUTPUT PANEL + VISUAL + BINDING ENGINE v200
+=========================================================== -->
+
+<!-- OUTPUT + VISUAL -->
+<div class="box" style="margin-top:16px;">
+  <div class="box-header">
+    <h2>Output Analisis v200 GODMODE</h2>
+    <span class="tag">Neutral • No Odds • Data Only</span>
+  </div>
+
+  <!-- PANEL TEKS -->
+  <div id="result_panel" style="
+    white-space:pre-wrap;
+    font-family:Consolas,monospace;
+    font-size:12px;
+    background:#050810;
+    color:#e8f0ff;
+    padding:10px;
+    border-radius:8px;
+    min-height:220px;
+    max-height:520px;
+    overflow-y:auto;
+  ">Hasil analisis v200 akan muncul di sini setelah tombol ANALYZE ditekan.</div>
+
+  <!-- RADAR HOME / AWAY -->
+  <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:12px;">
+    <div style="flex:1 1 220px;">
+      <div style="font-size:11px;color:var(--sub);margin-bottom:4px;">Radar Home</div>
+      <canvas id="radar_home" width="260" height="260" style="border:1px solid #1f2937;border-radius:8px;"></canvas>
+    </div>
+    <div style="flex:1 1 220px;">
+      <div style="font-size:11px;color:var(--sub);margin-bottom:4px;">Radar Away</div>
+      <canvas id="radar_away" width="260" height="260" style="border:1px solid #1f2937;border-radius:8px;"></canvas>
+    </div>
+  </div>
+
+  <!-- WAVE + HEATLINE -->
+  <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:12px;">
+    <div style="flex:1 1 240px;">
+      <div style="font-size:11px;color:var(--sub);margin-bottom:4px;">Momentum Wave</div>
+      <canvas id="wave_chart" width="260" height="120" style="border:1px solid #1f2937;border-radius:8px;"></canvas>
+    </div>
+    <div style="flex:1 1 240px;">
+      <div style="font-size:11px;color:var(--sub);margin-bottom:4px;">Heatline Balance</div>
+      <canvas id="heatline" width="260" height="120" style="border:1px solid #1f2937;border-radius:8px;"></canvas>
+    </div>
+  </div>
+
+  <!-- ATTACK / DEFENSE / CHAOS -->
+  <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:12px;">
+    <div style="flex:1 1 220px;">
+      <div style="font-size:11px;color:var(--sub);margin-bottom:4px;">Attack Strength Bar</div>
+      <canvas id="bar_atk" width="260" height="70" style="border:1px solid #1f2937;border-radius:8px;"></canvas>
+    </div>
+    <div style="flex:1 1 220px;">
+      <div style="font-size:11px;color:var(--sub);margin-bottom:4px;">Defense Strength Bar</div>
+      <canvas id="bar_def" width="260" height="70" style="border:1px solid #1f2937;border-radius:8px;"></canvas>
+    </div>
+    <div style="flex:1 1 200px;">
+      <div style="font-size:11px;color:var(--sub);margin-bottom:4px;">Chaos Level</div>
+      <canvas id="chaos_bar" width="220" height="70" style="border:1px solid #1f2937;border-radius:8px;"></canvas>
+    </div>
+  </div>
+
+  <!-- DIALS -->
+  <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:12px;">
+    <div style="flex:1 1 160px;">
+      <div style="font-size:11px;color:var(--sub);margin-bottom:4px;">Reliability Home</div>
+      <canvas id="dial_relH" width="180" height="120" style="border:1px solid #1f2937;border-radius:8px;"></canvas>
+    </div>
+    <div style="flex:1 1 160px;">
+      <div style="font-size:11px;color:var(--sub);margin-bottom:4px;">Reliability Away</div>
+      <canvas id="dial_relA" width="180" height="120" style="border:1px solid #1f2937;border-radius:8px;"></canvas>
+    </div>
+    <div style="flex:1 1 160px;">
+      <div style="font-size:11px;color:var(--sub);margin-bottom:4px;">Risk Level</div>
+      <canvas id="dial_risk" width="180" height="120" style="border:1px solid #1f2937;border-radius:8px;"></canvas>
+    </div>
+  </div>
+
+  <!-- SCORE WHEEL -->
+  <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:12px;">
+    <div style="flex:1 1 260px;">
+      <div style="font-size:11px;color:var(--sub);margin-bottom:4px;">Score Probability Wheel (Base Scenario)</div>
+      <canvas id="score_wheel" width="260" height="260" style="border:1px solid #1f2937;border-radius:8px;"></canvas>
+    </div>
+  </div>
+
+  <!-- EXTRA: ZONE, PASS, CHAOS, DEF, FLOW -->
+  <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:12px;">
+    <div style="flex:1 1 220px;">
+      <div style="font-size:11px;color:var(--sub);margin-bottom:4px;">Zone Threat Map</div>
+      <canvas id="zone_threat" width="240" height="140" style="border:1px solid #1f2937;border-radius:8px;"></canvas>
+    </div>
+    <div style="flex:1 1 220px;">
+      <div style="font-size:11px;color:var(--sub);margin-bottom:4px;">Passing Lane Map</div>
+      <canvas id="pass_map" width="240" height="140" style="border:1px solid #1f2937;border-radius:8px;"></canvas>
+    </div>
+    <div style="flex:1 1 220px;">
+      <div style="font-size:11px;color:var(--sub);margin-bottom:4px;">Chaos Mesh</div>
+      <canvas id="chaos_mesh" width="240" height="140" style="border:1px solid #1f2937;border-radius:8px;"></canvas>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:12px;">
+    <div style="flex:1 1 220px;">
+      <div style="font-size:11px;color:var(--sub);margin-bottom:4px;">Defensive Heat / Stress</div>
+      <canvas id="def_heat" width="260" height="150" style="border:1px solid #1f2937;border-radius:8px;"></canvas>
+    </div>
+    <div style="flex:1 1 220px;">
+      <div style="font-size:11px;color:var(--sub);margin-bottom:4px;">Attack Flow Vector</div>
+      <canvas id="attack_flow" width="260" height="150" style="border:1px solid #1f2937;border-radius:8px;"></canvas>
+    </div>
+  </div>
+
+  <!-- BUTTONS -->
+  <button id="btn_analyze_v200" class="btn-main">ANALYZE v200 GODMODE</button>
+  <button id="btn_clear_v200" class="btn-clear">CLEAR</button>
+
+  <div style="font-size:11px;color:var(--sub);margin-top:6px;">
+    Engine v200 GODMODE:
+    • Tidak memakai odds. • Tidak diarahkan ke Home/Away atau Over/Under.
+    • Murni statistik tim + konteks pertandingan yang Anda input.
+  </div>
+</div><!-- /box -->
+
+</div><!-- /container -->
+
+<!-- ===========================================================
+     BINDING SCRIPT v200 — KONEKSI UI ↔ ENGINE
+=========================================================== -->
+<script>
+(function(){
+  "use strict";
+  const V = window.V200;
+
+  function g(id){ return document.getElementById(id); }
+  function num(v){ return V.num(v); }
+
+  function collectInput(){
+    const home = {
+      name   : (g("h_name")?.value || "").trim() || "HOME",
+      gpg    : num(g("h_gpg")?.value),
+      gc     : num(g("h_gc")?.value),
+      shots  : num(g("h_shots")?.value),
+      shc    : num(g("h_shc")?.value),
+
+      form_raw : (g("h_form_raw")?.value || "").trim(),
+      form     : num(g("h_form")?.value),
+      stab     : num(g("h_stab")?.value),
+      avail    : num(g("h_avail")?.value),
+      gk       : num(g("h_gk")?.value),
+      cross    : num(g("h_cross")?.value),
+      build    : num(g("h_build")?.value),
+      pressres : num(g("h_pressres")?.value),
+      f3t      : num(g("h_f3t")?.value),
+      xthreat  : num(g("h_xthreat")?.value),
+      trans    : num(g("h_trans")?.value),
+      lb       : num(g("h_lb")?.value),
+      press    : num(g("h_press")?.value),
+      wave     : num(g("h_wave")?.value),
+      dm15     : num(g("h_dm15")?.value),
+      style    : num(g("h_style")?.value),
+      poss_t   : num(g("h_poss_t")?.value)
+    };
+
+    const away = {
+      name   : (g("a_name")?.value || "").trim() || "AWAY",
+      gpg    : num(g("a_gpg")?.value),
+      gc     : num(g("a_gc")?.value),
+      shots  : num(g("a_shots")?.value),
+      shc    : num(g("a_shc")?.value),
+
+      form_raw : (g("a_form_raw")?.value || "").trim(),
+      form     : num(g("a_form")?.value),
+      stab     : num(g("a_stab")?.value),
+      avail    : num(g("a_avail")?.value),
+      gk       : num(g("a_gk")?.value),
+      cross    : num(g("a_cross")?.value),
+      build    : num(g("a_build")?.value),
+      pressres : num(g("a_pressres")?.value),
+      f3t      : num(g("a_f3t")?.value),
+      xthreat  : num(g("a_xthreat")?.value),
+      trans    : num(g("a_trans")?.value),
+      lb       : num(g("a_lb")?.value),
+      press    : num(g("a_press")?.value),
+      wave     : num(g("a_wave")?.value),
+      dm15     : num(g("a_dm15")?.value),
+      style    : num(g("a_style")?.value),
+      poss_t   : num(g("a_poss_t")?.value)
+    };
+
+    const ctxRaw = {
+      mode    : g("ctx_mode")?.value || "league",
+      weather : g("ctx_weather")?.value || "clear",
+      ref     : num(g("ctx_ref")?.value),
+      tempo   : num(g("ctx_tempo")?.value),
+      var     : num(g("ctx_var")?.value),
+      chaos   : num(g("ctx_chaos")?.value),
+      stage   : g("ctx_stage")?.value || "",
+      pitch   : g("ctx_pitch")?.value || "good",
+      league  : (g("ctx_league")?.value || "").trim(),
+      h2h     : (g("ctx_h2h_raw")?.value || "").trim(),
+      note    : (g("ctx_note")?.value || "").trim()
+    };
+
+    return {home,away,ctxRaw};
+  }
+
+  function clearCanvas(id){
+    const c = g(id);
+    if(!c) return;
+    const ctx = c.getContext("2d");
+    if(!ctx) return;
+    ctx.clearRect(0,0,c.width,c.height);
+  }
+
+  function clearAll(){
+    // clear inputs
+    const inputs = document.querySelectorAll("input, textarea, select");
+    inputs.forEach(el=>{
+      if(el.tagName==="SELECT") el.value = "";
+      else el.value = "";
+    });
+
+    // reset result
+    const panel = g("result_panel");
+    if(panel){
+      panel.textContent = "Hasil analisis v200 akan muncul di sini setelah tombol ANALYZE ditekan.";
+    }
+
+    // clear canvases
+    [
+      "radar_home","radar_away","wave_chart","heatline",
+      "bar_atk","bar_def","chaos_bar",
+      "dial_relH","dial_relA","dial_risk",
+      "score_wheel","zone_threat","pass_map","chaos_mesh",
+      "def_heat","attack_flow"
+    ].forEach(clearCanvas);
+  }
+
+  function analyze(){
+    const raw = collectInput();
+
+    // Bangun paket untuk engine
+    const omega = V.Omega({home:raw.home,away:raw.away});
+    const context = V.Context({
+      league : raw.ctxRaw.league,
+      mode   : raw.ctxRaw.mode,
+      weather: raw.ctxRaw.weather,
+      pitch  : raw.ctxRaw.pitch,
+      h2h    : raw.ctxRaw.h2h
+    });
+    const tactical = V.Tactical({home:raw.home,away:raw.away,ctx:context});
+    const sim      = V.Sim({omega:omega,context:context,tactical:tactical});
+
+    const report   = V.Report({
+      input   : {home:raw.home,away:raw.away},
+      ctxRaw  : raw.ctxRaw,
+      context : context,
+      omega   : omega,
+      tactical: tactical,
+      sim     : sim
+    });
+
+    // tampilkan teks
+    const panel = g("result_panel");
+    if(panel){
+      panel.textContent = report.text;
+    }
+
+    // visual
+    const pkg = {
+      input   : {home:raw.home,away:raw.away},
+      omega   : omega,
+      context : context,
+      tactical: tactical,
+      sim     : sim,
+      report  : report,
+      index   : report.index
+    };
+
+    if(V.VisualBasic) V.VisualBasic(pkg);
+    if(V.VisualExtra) V.VisualExtra(pkg);
+  }
+
+  // binding tombol
+  const btnAnalyze = g("btn_analyze_v200");
+  const btnClear   = g("btn_clear_v200");
+  if(btnAnalyze) btnAnalyze.addEventListener("click", analyze);
+  if(btnClear)   btnClear.addEventListener("click", clearAll);
+
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,2209 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Match Prediction Engine v2000000</title>
+<style>
+  body {
+    font-family: system-ui, sans-serif;
+    background: #020617;
+    color: #e2e8f0;
+    margin: 0;
+    padding: 20px;
+  }
+  h1, h2 {
+    margin-top: 28px;
+    color: #38bdf8;
+  }
+  input, select, textarea {
+    width: 100%;
+    padding: 6px 8px;
+    margin: 4px 0 12px 0;
+    background: #020617;
+    color: #e2e8f0;
+    border: 1px solid #334155;
+    border-radius: 6px;
+  }
+  button {
+    padding: 8px 16px;
+    border: none;
+    background: #3b82f6;
+    color: white;
+    margin: 6px 2px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  button:hover {
+    background: #2563eb;
+  }
+  .section {
+    border: 1px solid #1e293b;
+    padding: 14px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    background: #020617;
+  }
+  .panel {
+    background: #020617;
+    padding: 10px;
+    border-radius: 8px;
+    white-space: pre-line;
+    border: 1px solid #1e293b;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 6px;
+  }
+  table th, table td {
+    border: 1px solid #1e293b;
+    padding: 4px 6px;
+    text-align: center;
+    font-size: 12px;
+  }
+</style>
+</head>
+
+<body>
+
+<h1>Match Prediction Engine v2000000</h1>
+
+<div class="section">
+  <h2>Informasi Match</h2>
+
+  <label>Judul Match</label>
+  <input id="m_title">
+
+  <label>Kompetisi</label>
+  <input id="m_league">
+
+  <label>Tanggal</label>
+  <input id="m_date" placeholder="YYYY-MM-DD">
+
+  <label>Waktu Kick-off</label>
+  <input id="m_time" placeholder="HH:MM">
+
+  <label>Catatan Tambahan</label>
+  <textarea id="m_note" rows="2"></textarea>
+</div>
+<!-- =========================== -->
+<!-- PART 2: INPUT HOME & AWAY  -->
+<!-- =========================== -->
+
+<div class="section">
+  <h2>Data Tim Home</h2>
+
+  <label>Nama Tim Home</label>
+  <input id="h_name">
+
+  <label>GPG (Goals Per Game)</label>
+  <input id="h_gpg">
+
+  <label>GC (Goals Conceded)</label>
+  <input id="h_gc">
+
+  <label>xG</label>
+  <input id="h_xg">
+
+  <label>xGA</label>
+  <input id="h_xga">
+
+  <label>Form Rating (0–10)</label>
+  <input id="h_form">
+
+  <label>Quality Rating (0–10)</label>
+  <input id="h_quality">
+
+  <label>Stability Rating (0–10)</label>
+  <input id="h_stab">
+</div>
+
+
+<div class="section">
+  <h2>Data Tim Away</h2>
+
+  <label>Nama Tim Away</label>
+  <input id="a_name">
+
+  <label>GPG (Goals Per Game)</label>
+  <input id="a_gpg">
+
+  <label>GC (Goals Conceded)</label>
+  <input id="a_gc">
+
+  <label>xG</label>
+  <input id="a_xg">
+
+  <label>xGA</label>
+  <input id="a_xga">
+
+  <label>Form Rating (0–10)</label>
+  <input id="a_form">
+
+  <label>Quality Rating (0–10)</label>
+  <input id="a_quality">
+
+  <label>Stability Rating (0–10)</label>
+  <input id="a_stab">
+</div>
+
+
+<!-- =========================== -->
+<!-- ABSENSI -->
+<!-- =========================== -->
+
+<div class="section">
+  <h2>Absensi Pemain</h2>
+
+  <h3>Home</h3>
+  <label>GK (0–10)</label>
+  <input id="h_abs_gk">
+  <label>DF (0–10)</label>
+  <input id="h_abs_df">
+  <label>MF (0–10)</label>
+  <input id="h_abs_md">
+  <label>FW (0–10)</label>
+  <input id="h_abs_fw">
+
+  <h3>Away</h3>
+  <label>GK (0–10)</label>
+  <input id="a_abs_gk">
+  <label>DF (0–10)</label>
+  <input id="a_abs_df">
+  <label>MF (0–10)</label>
+  <input id="a_abs_md">
+  <label>FW (0–10)</label>
+  <input id="a_abs_fw">
+
+  <button id="btn_abs_calc">Hitung Absensi</button>
+  <div id="abs_info" class="panel">Absensi belum dihitung.</div>
+</div>
+
+
+
+<!-- =========================== -->
+<!-- TAKTIK: 3 FORMASI + PARAMETER -->
+<!-- =========================== -->
+
+<div class="section">
+  <h2>Taktik & Formasi Home</h2>
+
+  <label>Formasi 1</label>
+  <input id="h_form1" placeholder="misal: 4-3-3">
+
+  <label>Formasi 2</label>
+  <input id="h_form2" placeholder="opsional">
+
+  <label>Formasi 3</label>
+  <input id="h_form3" placeholder="opsional">
+
+  <label>Style of Play</label>
+  <select id="h_style">
+    <option value="">—</option>
+    <option value="direct">Direct</option>
+    <option value="balanced">Balanced</option>
+    <option value="possession">Possession</option>
+    <option value="counter">Counter-Attacking</option>
+  </select>
+
+  <label>Width (0–10)</label>
+  <input id="h_width">
+
+  <label>Compactness (0–10)</label>
+  <input id="h_compact">
+
+  <label>Height Line (0–10)</label>
+  <input id="h_line">
+
+  <label>Verticality (0–10)</label>
+  <input id="h_vertical">
+</div>
+
+
+<div class="section">
+  <h2>Taktik & Formasi Away</h2>
+
+  <label>Formasi 1</label>
+  <input id="a_form1">
+
+  <label>Formasi 2</label>
+  <input id="a_form2">
+
+  <label>Formasi 3</label>
+  <input id="a_form3">
+
+  <label>Style of Play</label>
+  <select id="a_style">
+    <option value="">—</option>
+    <option value="direct">Direct</option>
+    <option value="balanced">Balanced</option>
+    <option value="possession">Possession</option>
+    <option value="counter">Counter-Attacking</option>
+  </select>
+
+  <label>Width (0–10)</label>
+  <input id="a_width">
+
+  <label>Compactness (0–10)</label>
+  <input id="a_compact">
+
+  <label>Height Line (0–10)</label>
+  <input id="a_line">
+
+  <label>Verticality (0–10)</label>
+  <input id="a_vertical">
+</div>
+
+
+
+<!-- =========================== -->
+<!-- XTHREAT, PSYCHOLOGY -->
+<!-- =========================== -->
+
+<div class="section">
+  <h2>Psikologi & xThreat</h2>
+
+  <label>Motivation (0–10)</label>
+  <input id="psy_mot">
+
+  <label>Press Resistance (0–10)</label>
+  <input id="psy_press">
+
+  <label>Crowd Intensity (0–10)</label>
+  <input id="psy_crowd">
+
+  <h3>xThreat (xT)</h3>
+  <label>xT Home (0–10)</label>
+  <input id="h_xt">
+
+  <label>xT Away (0–10)</label>
+  <input id="a_xt">
+
+  <label>Finishing Quality (0–10)</label>
+  <input id="finishing">
+</div>
+
+
+
+<!-- =========================== -->
+<!-- H2H -->
+<!-- =========================== -->
+
+<div class="section">
+  <h2>Data H2H (Opsional)</h2>
+  <label>Input H2H (format bebas)</label>
+  <textarea id="h2h_input" rows="3"></textarea>
+
+  <button id="btn_h2h_parse">Parse H2H</button>
+  <button id="btn_h2h_clear">Clear</button>
+
+  <div id="h2h_result" class="panel">H2H belum diproses.</div>
+</div>
+<!-- =========================== -->
+<!-- PART 3: PENGATURAN SIMULASI -->
+<!-- =========================== -->
+
+<div class="section">
+  <h2>Pengaturan Simulasi</h2>
+
+  <label>Jumlah Simulasi (Monte Carlo)</label>
+  <input id="sim_count" placeholder="misal: 30000">
+
+  <label>Score Cap (maksimal skor dihitung)</label>
+  <input id="score_cap" placeholder="misal: 5">
+
+  <label>Bias Level (Anti-condong)</label>
+  <select id="bias_level">
+    <option value="soft">Soft</option>
+    <option value="medium">Medium</option>
+    <option value="strong">Strong</option>
+    <option value="ultra">Ultra</option>
+  </select>
+
+  <h3>Preset Cepat</h3>
+  <button id="preset_sim_fast">FAST (15.000)</button>
+  <button id="preset_sim_std">STANDARD (30.000)</button>
+  <button id="preset_sim_max">MAX (60.000)</button>
+  <button id="preset_sim_ultra">ULTRA (100.000)</button>
+</div>
+
+
+<!-- =========================== -->
+<!-- TOMBOL UTAMA -->
+<!-- =========================== -->
+
+<div class="section">
+  <h2>Analisis</h2>
+  <button id="btn_analyze">ANALYZE v2000000</button>
+  <button id="btn_clear">CLEAR ALL</button>
+</div>
+
+
+<!-- =========================== -->
+<!-- PANEL OUTPUT HASIL -->
+<!-- =========================== -->
+
+<div class="section">
+  <h2>Hasil Analisis</h2>
+  <div id="result_panel" class="panel">Belum ada analisis. Tekan ANALYZE.</div>
+</div>
+
+<div class="section">
+  <h2>Narasi & Storyline</h2>
+  <div id="analyst_panel" class="panel">Belum ada narasi.</div>
+</div>
+
+
+<!-- =========================== -->
+<!-- CANVAS GRAFIK -->
+<!-- =========================== -->
+
+<div class="section">
+  <h2>Grafik — Radar Diagram</h2>
+  <canvas id="v20_radar" width="360" height="360"></canvas>
+</div>
+
+<div class="section">
+  <h2>Grafik — Balance Bar</h2>
+  <canvas id="v20_balance" width="360" height="120"></canvas>
+</div>
+
+<div class="section">
+  <h2>Risk & Uncertainty</h2>
+  <canvas id="v20_risk" width="360" height="120"></canvas>
+</div>
+
+<div class="section">
+  <h2>Flow (0'–90')</h2>
+  <canvas id="v20_flow" width="500" height="200"></canvas>
+</div>
+
+<div class="section">
+  <h2>Score Probability Matrix</h2>
+  <div id="score_matrix_wrap">Belum ada matrix. Tekan ANALYZE.</div>
+</div>
+
+
+<!-- =========================== -->
+<!-- PILLS (INDIKATOR SINGKAT) -->
+<!-- =========================== -->
+<div class="section">
+  <h2>Indikator Singkat</h2>
+  <div id="uncert_pill" class="panel">Uncertainty: -</div>
+  <div id="risk_pill" class="panel">Risk Index: -</div>
+  <div id="meta_pill" class="panel">Meta Consistency: -</div>
+  <div id="msi_pill" class="panel">MSI: -</div>
+  <div id="frag_pill" class="panel">Frag: -</div>
+  <div id="sdi_pill" class="panel">SDI: -</div>
+</div>
+<!-- ====================================== -->
+<!-- PART 4: GLOBAL CORE FUNCTIONS (V20)   -->
+<!-- ====================================== -->
+<script>
+(function(){
+  const V20 = window.V20 = window.V20 || {};
+
+  /* ------------------------------
+     UTILITIES
+  ------------------------------ */
+
+  V20.clamp = (v,min,max)=>{
+    v = Number(v);
+    if (isNaN(v)) return min;
+    return Math.max(min, Math.min(max, v));
+  };
+
+  V20.num = v => {
+    const n = Number(v);
+    return isNaN(n) ? 0 : n;
+  };
+
+  V20.str = v => (v===undefined || v===null) ? "" : String(v);
+
+
+  /* ------------------------------
+     POISSON PMF
+  ------------------------------ */
+
+  V20.poissonPMF = function(lambda, k){
+    lambda = Math.max(lambda, 0.00001);
+    k = Math.max(0, k|0);
+    return (Math.exp(-lambda) * Math.pow(lambda,k)) / V20.factorial(k);
+  };
+
+  // factorial cache kecil
+  const factCache = {};
+  V20.factorial = function(n){
+    if (n < 0) return 1;
+    if (factCache[n]) return factCache[n];
+    let r = 1;
+    for (let i=1;i<=n;i++) r *= i;
+    factCache[n] = r;
+    return r;
+  };
+
+
+  /* ------------------------------
+     SAMPLE POISSON (RNG)
+  ------------------------------ */
+
+  V20.samplePoisson = function(lambda){
+    lambda = Math.max(lambda, 0.00001);
+    const L = Math.exp(-lambda);
+    let k = 0;
+    let p = 1;
+    do {
+      k++;
+      p *= Math.random();
+    } while (p > L);
+    return k - 1;
+  };
+
+
+  /* ------------------------------
+     PARSE FORMASI: "4-3-3"
+  ------------------------------ */
+
+  V20.parseFormation = function(str){
+    str = V20.str(str).trim();
+    if (!str) return {valid:false};
+
+    const parts = str.split("-");
+    const nums = [];
+
+    parts.forEach(p=>{
+      const n = parseInt(p,10);
+      if (!isNaN(n) && n>0 && n<=10) nums.push(n);
+    });
+
+    if (!nums.length) return {valid:false};
+
+    const def = nums[0];                       // garis belakang
+    const att = nums[nums.length-1];           // garis depan
+
+    // total gelandang
+    let mid = 0;
+    for (let i=1;i<nums.length-1;i++){
+      mid += nums[i];
+    }
+
+    // level ofensif dasar
+    let offRaw = att*1.1 + mid*0.45 - def*0.55;
+    offRaw = (offRaw - 0.5) / 6;
+    const offLevel = V20.clamp(offRaw+0.5,0,1);
+
+    // level defensif
+    let defBias = (def*0.8 - att*0.3);
+    defBias = (defBias - 0.5)/5;
+    defBias = V20.clamp(defBias+0.5,0,1);
+
+    // lanes
+    const total = nums.reduce((a,b)=>a+b,0);
+    let central = 0.5 + (mid - total/2) / total;
+    central = V20.clamp(central,0.2,0.8);
+    const flank = 1-central;
+
+    // kedalaman garis (semakin banyak bek → makin deep)
+    const depth = V20.clamp(def/6,0.25,1);
+
+    return {
+      valid:true,
+      defLine:def,
+      atkLine:att,
+      midLine:mid,
+      offLevel,
+      defBias,
+      lanes:{central,flank},
+      depth
+    };
+  };
+
+
+  /* ------------------------------
+     KOMBINASI 3 FORMASI
+  ------------------------------ */
+
+  V20.combineFormations = function(f1,f2,f3){
+    const list = [f1,f2,f3].filter(f=>f && f.valid);
+    if (!list.length){
+      return {
+        off:0.5, def:0.5,
+        depth:0.5,
+        flex:0,
+        lanes:{central:0.5, flank:0.5}
+      };
+    }
+
+    const avg = arr => arr.reduce((a,b)=>a+b,0)/arr.length;
+
+    const offAvg  = avg(list.map(f=>f.offLevel));
+    const defAvg  = avg(list.map(f=>f.defBias));
+    const depth   = avg(list.map(f=>f.depth));
+    const cenAvg  = avg(list.map(f=>f.lanes.central));
+    const flAvg   = avg(list.map(f=>f.lanes.flank));
+
+    // fleksibilitas = beda antar formasi
+    let flex=0, count=0;
+    for (let i=0;i<list.length;i++){
+      for (let j=i+1;j<list.length;j++){
+        flex += Math.abs(list[i].offLevel - list[j].offLevel);
+        flex += Math.abs(list[i].defBias  - list[j].defBias)*0.6;
+        count++;
+      }
+    }
+    flex = count ? V20.clamp(flex/count,0,1) : 0;
+
+    return {
+      off:offAvg,
+      def:defAvg,
+      depth,
+      flex,
+      lanes:{central:cenAvg, flank:flAvg}
+    };
+  };
+
+
+  /* ------------------------------
+     ABSENSI
+  ------------------------------ */
+
+  V20.absenceImpact = function(gk,df,md,fw){
+    gk = V20.num(gk);
+    df = V20.num(df);
+    md = V20.num(md);
+    fw = V20.num(fw);
+
+    const severity = V20.clamp(
+      gk*0.33 + df*0.28 + md*0.22 + fw*0.17,
+      0,10
+    );
+
+    const atkPenalty = V20.clamp(fw*0.06 + md*0.03,0,0.8);
+    const defPenalty = V20.clamp(df*0.07 + gk*0.08,0,1.0);
+
+    return {severity, atkPenalty, defPenalty};
+  };
+
+
+  /* ------------------------------
+     H2H PARSER
+  ------------------------------ */
+
+  V20.parseH2H = function(raw){
+    raw = V20.str(raw).trim();
+    if (!raw) return {n:0};
+
+    const lines = raw.split("\n").map(s=>s.trim()).filter(Boolean);
+    let hGoals=0, aGoals=0, n=0;
+
+    lines.forEach(line=>{
+      const m = line.match(/(\d+)\s*[-:]\s*(\d+)/);
+      if (m){
+        const h = parseInt(m[1],10);
+        const a = parseInt(m[2],10);
+        if (!isNaN(h) && !isNaN(a)){
+          hGoals += h;
+          aGoals += a;
+          n++;
+        }
+      }
+    });
+
+    if (!n) return {n:0};
+
+    const homeAvg = hGoals/n;
+    const awayAvg = aGoals/n;
+    const totalAvg= (hGoals+aGoals)/n;
+
+    let trend="seimbang";
+    if (totalAvg > 3) trend="cenderung banyak gol";
+    else if (totalAvg < 2) trend="cenderung ketat/rendah gol";
+
+    return {
+      n,
+      homeAvg,
+      awayAvg,
+      totalAvg,
+      trend
+    };
+  };
+
+
+  /* ------------------------------
+     FUNGSI INFO FORM PER TIM
+  ------------------------------ */
+
+  V20.calcFormInfo = function(side, val){
+    const out = document.getElementById(side+"_form_info");
+    if (out){
+      out.textContent = "Form Rating "+side+" = "+val;
+    }
+  };
+
+})();
+</script>
+<!-- ========================================= -->
+<!-- PART 5: TEAM ENGINE + TACTIC ENGINE V20  -->
+<!-- ========================================= -->
+<script>
+(function(){
+  const V20 = window.V20 = window.V20 || {};
+
+  /* ===========================================================
+     1) TEAM ENGINE — Membaca Profil Tim Secara Holistik
+  =========================================================== */
+
+  V20.buildTeam = function(raw, abs){
+    const gpg = V20.num(raw.gpg);
+    const gc  = V20.num(raw.gc);
+    const xg  = V20.num(raw.xg);
+    const xga = V20.num(raw.xga);
+
+    const quality  = V20.clamp(V20.num(raw.quality), 0, 10);
+    const stability= V20.clamp(V20.num(raw.stab),     0, 10);
+    const form     = V20.clamp(V20.num(raw.form),     0, 10);
+
+    const atkIndex = V20.clamp(gpg*0.38 + xg*0.42 + quality*0.12 + form*0.08 - abs.atkPenalty, 0, 10);
+    const defIndex = V20.clamp((10-gc)*0.33 + (10-xga)*0.37 + stability*0.20 - abs.defPenalty*2, 0, 10);
+
+    const momentum = V20.clamp(form*0.6 + quality*0.25 + (10-stability)*0.15, 0, 10);
+
+    return {
+      gpg, gc, xg, xga,
+      quality,
+      stability,
+      formScore: form,
+      attackIdx: atkIndex,
+      defenseIdx: defIndex,
+      momentum,
+      absence: abs
+    };
+  };
+
+
+  /* ===========================================================
+     2) TACTICAL ENGINE — Menggabungkan 3 Formasi & Parameter
+  =========================================================== */
+
+  V20.buildTacticalVector = function(side, inp){
+
+    // tentukan id input berdasarkan side
+    const pre = (side === "h") ? "h_" : "a_";
+
+    const f1 = V20.parseFormation(inp[pre+"form1"]);
+    const f2 = V20.parseFormation(inp[pre+"form2"]);
+    const f3 = V20.parseFormation(inp[pre+"form3"]);
+
+    const combo = V20.combineFormations(f1, f2, f3);
+
+    // parameter taktik numeric
+    const width   = V20.clamp(V20.num(inp[pre+"width"])/10,    0,1);
+    const compact = V20.clamp(V20.num(inp[pre+"compact"])/10,  0,1);
+    const line    = V20.clamp(V20.num(inp[pre+"line"])/10,     0,1);
+    const vert    = V20.clamp(V20.num(inp[pre+"vertical"])/10, 0,1);
+
+    // pressing intensity
+    let press = line*0.55 + vert*0.45;
+    press = V20.clamp(press, 0,1);
+
+    // risk pressing
+    let riskPress = width*0.40 + line*0.60;
+    riskPress = V20.clamp(riskPress, 0,1);
+
+    // shape stability
+    let shape = compact*0.60 + combo.depth*0.40;
+    shape = V20.clamp(shape, 0,1);
+
+    return {
+      side,
+      width, compact, line, vertical:vert,
+      offLevel: combo.off,
+      defBias: combo.def,
+      lineDepth: combo.depth,
+      laneCentral: combo.lanes.central,
+      laneFlank: combo.lanes.flank,
+      flex: combo.flex,
+      pressIntensity: press,
+      riskPress,
+      shapeStability: shape
+    };
+  };
+
+
+  /* ===========================================================
+     3) CONTEXT ENGINE — Tempo / Chaos / Importance / xT
+  =========================================================== */
+
+  V20.buildContext = function(extra, h2h, extra2, tact){
+
+    // Home Advantage selalu ringan dan netral
+    const homeAdv = 0.07;
+
+    const h_xt = V20.clamp(extra2.h_xt/10, 0,1);
+    const a_xt = V20.clamp(extra2.a_xt/10, 0,1);
+
+    const finishing = V20.clamp(extra2.finishing/10, 0,1);
+
+    // psikologi
+    const psyMot   = V20.clamp(extra2.psy_mot/10,   0,1);
+    const psyPress = V20.clamp(extra2.psy_press/10, 0,1);
+    const psyCrowd = V20.clamp(extra2.psy_crowd/10, 0,1);
+
+    // tempo default
+    let tempo = 5 + (h_xt + a_xt)*0.7 + (psyMot-0.5)*1.2;
+    tempo = V20.clamp(tempo, 1,9);
+
+    // chaos default
+    let chaos = 5 + Math.abs(tact.home.flex - tact.away.flex)*2.5 + (1 - finishing)*1.4;
+    chaos = V20.clamp(chaos, 1,9);
+
+    // importance default
+    let importance = 5 + psyCrowd*2;
+    importance = V20.clamp(importance, 1,9);
+
+    return {
+      tempo,
+      chaos,
+      importance,
+      homeAdv,
+      lanes: {
+        central: (tact.home.laneCentral + tact.away.laneCentral)/2,
+        flank:   (tact.home.laneFlank   + tact.away.laneFlank)  /2
+      },
+      extras:{
+        h_xt, a_xt,
+        finishing,
+        psy_mot:psyMot,
+        psy_press:psyPress,
+        psy_crowd:psyCrowd
+      }
+    };
+  };
+
+})();
+</script>
+<!-- ========================================= -->
+<!-- PART 6: EXPECTED GOALS ENGINE (λ V20)    -->
+<!-- ========================================= -->
+<script>
+(function(){
+  const V20 = window.V20 = window.V20 || {};
+
+  /* ===========================================================
+     PHASE MULTIPLIER (Early / Mid / Late)
+  =========================================================== */
+  V20.phaseMultipliers = function(ctx, home, away){
+    const tempo = ctx.tempo;      // 1–9
+    const chaos = ctx.chaos;      // 1–9
+    const imp   = ctx.importance; // 1–9
+
+    const stabAvg = (home.stability + away.stability)/2;
+
+    let early = 1 + (tempo-5)*0.015 + (chaos-5)*0.010;
+    let mid   = 1 + (tempo-5)*0.030 + (chaos-5)*0.020;
+    let late  = 1 + (tempo-5)*0.040 + (chaos-5)*0.035 + (imp-5)*0.020;
+
+    // stabilitas tinggi → menahan amplifikasi di late
+    const stabAdj = (stabAvg-5)/10;
+    late *= (1 - stabAdj*0.35);
+
+    early = V20.clamp(early, 0.80, 1.20);
+    mid   = V20.clamp(mid,   0.85, 1.25);
+    late  = V20.clamp(late,  0.80, 1.30);
+
+    const wEarly = 0.25;
+    const wMid   = 0.45;
+    const wLate  = 0.30;
+
+    return {early, mid, late, wEarly, wMid, wLate};
+  };
+
+
+  /* ===========================================================
+     EXPECTED GOALS (λ) v2000000
+  =========================================================== */
+
+  V20.buildLambda = function(homeTeam, awayTeam, ctx, h2h, tact){
+    // 1) BASE λ dari data tim (GPG + xG)
+    const baseHome = homeTeam.gpg*0.40 + homeTeam.xg*0.60;
+    const baseAway = awayTeam.gpg*0.40 + awayTeam.xg*0.60;
+
+    // attackIdx & defenseIdx: 0–10
+    const atkH = homeTeam.attackIdx;
+    const atkA = awayTeam.attackIdx;
+    const defH = homeTeam.defenseIdx;
+    const defA = awayTeam.defenseIdx;
+
+    // attack factor (semakin tinggi attackIdx → naik)
+    const atkFactorH = 0.70 + (atkH/10)*0.80; // 0.7 – 1.5
+    const atkFactorA = 0.70 + (atkA/10)*0.80;
+
+    // defense factor (semakin tinggi defenseIdx → menurunkan λ lawan)
+    const defFactorVsH = 1.25 - (defH/10)*0.80; // dipakai ke λ Away
+    const defFactorVsA = 1.25 - (defA/10)*0.80; // dipakai ke λ Home
+
+    const dfH = V20.clamp(defFactorVsH, 0.45, 1.25);
+    const dfA = V20.clamp(defFactorVsA, 0.45, 1.25);
+
+    let lamStat_H = baseHome * atkFactorH * dfA;
+    let lamStat_A = baseAway * atkFactorA * dfH;
+
+    // 2) H2H LAYER (kalau ada)
+    let lamH2H_H = lamStat_H;
+    let lamH2H_A = lamStat_A;
+
+    if (h2h && h2h.n > 0){
+      const hBoost = 1 + V20.clamp((h2h.homeAvg - 1.3)*0.07, -0.25, 0.25);
+      const aBoost = 1 + V20.clamp((h2h.awayAvg - 1.0)*0.07, -0.25, 0.25);
+      lamH2H_H *= hBoost;
+      lamH2H_A *= aBoost;
+    }
+
+    // 3) CONTEXT LAYER: tempo + chaos + importance + homeAdv
+    const tempoFactor  = 1 + (ctx.tempo-5)*0.030;
+    const chaosFactor  = 1 + (ctx.chaos-5)*0.028;
+    const impFactor    = 1 + (ctx.importance-5)*0.020;
+    const lanesCentral = ctx.lanes.central; // 0–1; mendekati 1 → lebih central
+
+    let lamCtx_H = lamH2H_H * tempoFactor * chaosFactor * impFactor;
+    let lamCtx_A = lamH2H_A * tempoFactor * chaosFactor * impFactor;
+
+    // Home advantage
+    lamCtx_H *= (1 + ctx.homeAdv*0.7);
+    lamCtx_A *= (1 - ctx.homeAdv*0.3);
+
+    // 4) xThreat & Finishing LAYER
+    const h_xt = ctx.extras.h_xt;   // 0–1
+    const a_xt = ctx.extras.a_xt;   // 0–1
+    const finishing = ctx.extras.finishing; // 0–1
+
+    const xtDiff = (h_xt - a_xt); // -1..1
+
+    let lamXT_H = lamCtx_H * (1 + xtDiff*0.12);
+    let lamXT_A = lamCtx_A * (1 - xtDiff*0.12);
+
+    lamXT_H *= (1 + (finishing-0.5)*0.15);
+    lamXT_A *= (1 + (finishing-0.5)*0.15);
+
+    // 5) TACTICAL LAYER (menggunakan tactical vector penuh)
+    const offDiff   = tact.home.offLevel   - tact.away.offLevel;
+    const pressDiff = tact.home.pressIntensity - tact.away.pressIntensity;
+    const flexTotal = tact.home.flex + tact.away.flex;
+    const shapeGap  = tact.home.shapeStability - tact.away.shapeStability;
+
+    let lamTac_H = lamXT_H * (1 + offDiff*0.25 + pressDiff*0.18 + flexTotal*0.10 - shapeGap*0.08);
+    let lamTac_A = lamXT_A * (1 - offDiff*0.18 - pressDiff*0.12 + flexTotal*0.10 + shapeGap*0.06);
+
+    // lanes: jika central dominan → sedikit menurunkan gol ekstrem
+    const laneAdj = 1 - (lanesCentral-0.5)*0.08;
+    lamTac_H *= laneAdj;
+    lamTac_A *= laneAdj;
+
+    // CLAMP semua layer untuk mencegah outlier
+    function clampLam(v){ return V20.clamp(v, 0.2, 3.8); }
+
+    lamStat_H  = clampLam(lamStat_H);
+    lamStat_A  = clampLam(lamStat_A);
+    lamH2H_H   = clampLam(lamH2H_H);
+    lamH2H_A   = clampLam(lamH2H_A);
+    lamCtx_H   = clampLam(lamCtx_H);
+    lamCtx_A   = clampLam(lamCtx_A);
+    lamXT_H    = clampLam(lamXT_H);
+    lamXT_A    = clampLam(lamXT_A);
+    lamTac_H   = clampLam(lamTac_H);
+    lamTac_A   = clampLam(lamTac_A);
+
+    // FUSI LAYER: Stat + H2H + Context + xT + Tactical
+    const fH = clampLam(
+      lamStat_H*0.12 +
+      lamH2H_H*0.18 +
+      lamCtx_H*0.25 +
+      lamXT_H *0.20 +
+      lamTac_H*0.25
+    );
+    const fA = clampLam(
+      lamStat_A*0.12 +
+      lamH2H_A*0.18 +
+      lamCtx_A*0.25 +
+      lamXT_A *0.20 +
+      lamTac_A*0.25
+    );
+
+    // PHASE SPLIT (Early / Mid / Late)
+    const phases = V20.phaseMultipliers(ctx, homeTeam, awayTeam);
+
+    const lamH_early = fH * phases.early;
+    const lamH_mid   = fH * phases.mid;
+    const lamH_late  = fH * phases.late;
+
+    const lamA_early = fA * phases.early;
+    const lamA_mid   = fA * phases.mid;
+    const lamA_late  = fA * phases.late;
+
+    const lamH_final = clampLam(
+      lamH_early*phases.wEarly +
+      lamH_mid  *phases.wMid   +
+      lamH_late *phases.wLate
+    );
+    const lamA_final = clampLam(
+      lamA_early*phases.wEarly +
+      lamA_mid  *phases.wMid   +
+      lamA_late *phases.wLate
+    );
+
+    return {
+      lamH: lamH_final,
+      lamA: lamA_final,
+      phases,
+      layers:{
+        lamStat_H,  lamStat_A,
+        lamH2H_H,   lamH2H_A,
+        lamCtx_H,   lamCtx_A,
+        lamXT_H,    lamXT_A,
+        lamTac_H,   lamTac_A
+      }
+    };
+  };
+
+})();
+</script>
+<!-- ============================================ -->
+<!-- PART 7: ABSOLUTE PROBABILITY ENGINE v2000000 -->
+<!-- ============================================ -->
+<script>
+(function(){
+  const V20 = window.V20 = window.V20 || {};
+
+  /* ===========================================
+     1) DETERMINISTIC POISSON 1X2 + OU
+  =========================================== */
+  V20.detSim = function(lambda){
+    const maxG = 7;
+    const lamH = lambda.lamH;
+    const lamA = lambda.lamA;
+
+    let pH=0, pD=0, pA=0, total=0;
+    const ou = {
+      "0.5":{over:0,under:0},
+      "1.5":{over:0,under:0},
+      "2.5":{over:0,under:0},
+      "3.5":{over:0,under:0}
+    };
+
+    for (let h=0;h<=maxG;h++){
+      const pPH = V20.poissonPMF(lamH,h);
+      for (let a=0;a<=maxG;a++){
+        const pPA = V20.poissonPMF(lamA,a);
+        const p = pPH*pPA;
+        total += p;
+
+        if (h>a)      pH += p;
+        else if(h===a)pD += p;
+        else          pA += p;
+
+        const sum = h+a;
+        if (sum>0) ou["0.5"].over+=p; else ou["0.5"].under+=p;
+        if (sum>1) ou["1.5"].over+=p; else ou["1.5"].under+=p;
+        if (sum>2) ou["2.5"].over+=p; else ou["2.5"].under+=p;
+        if (sum>3) ou["3.5"].over+=p; else ou["3.5"].under+=p;
+      }
+    }
+
+    if (total>0){
+      pH/=total; pD/=total; pA/=total;
+      Object.keys(ou).forEach(k=>{
+        ou[k].over  /= total;
+        ou[k].under /= total;
+      });
+    }
+
+    return {pH,pD,pA,ou};
+  };
+
+
+  /* ===========================================
+     2) HYBRID MONTE CARLO MULTI-SCENARIO
+  =========================================== */
+  V20.monteCarlo = function(lambda, ctx, simCount, scoreCap){
+    simCount = V20.clamp(simCount || 30000, 10000, 120000);
+    scoreCap = V20.clamp(scoreCap || 5, 3, 8);
+
+    const lamH = lambda.lamH;
+    const lamA = lambda.lamA;
+    const lamTotalBase = lamH + lamA;
+
+    let homeWins=0, draws=0, awayWins=0, total=0, goalsTotal=0;
+    const matrix=[];
+    for(let h=0;h<=scoreCap;h++){
+      matrix[h]=[];
+      for(let a=0;a<=scoreCap;a++){
+        matrix[h][a]=0;
+      }
+    }
+
+    const normChaos = V20.clamp((ctx.chaos-3)/4, 0, 1);
+    const normTempo = V20.clamp((ctx.tempo-3)/4, 0, 1);
+
+    const ratioH = lamH / (lamH+lamA);
+    const ratioA = lamA / (lamH+lamA);
+
+    const scenarios = [
+      {name:"base",      w:0.40,                       fH:1.00, fA:1.00},
+      {name:"highChaos", w:0.15 + 0.25*normChaos,      fH:1.15, fA:1.15},
+      {name:"lowChaos",  w:0.10 + 0.20*(1-normChaos),  fH:0.82, fA:0.82},
+      {name:"homeLead",  w:0.08 + 0.12*ratioH,         fH:0.95, fA:1.05},
+      {name:"awayLead",  w:0.08 + 0.12*ratioA,         fH:1.05, fA:0.95},
+      {name:"lockedLow", w:0.05 + 0.10*(1-normTempo),  fH:0.78, fA:0.78}
+    ];
+
+    let wsum=0;
+    scenarios.forEach(s=>{ wsum += s.w; });
+    scenarios.forEach(s=>{ s.p = s.w / wsum; });
+
+    const cumulative=[];
+    let acc=0;
+    for(let i=0;i<scenarios.length;i++){
+      acc += scenarios[i].p;
+      cumulative[i] = acc;
+    }
+
+    const scenarioCount = {};
+    scenarios.forEach(s=>scenarioCount[s.name]=0);
+
+    function pickScenario(){
+      const r = Math.random();
+      for(let i=0;i<cumulative.length;i++){
+        if (r <= cumulative[i]) return scenarios[i];
+      }
+      return scenarios[scenarios.length-1];
+    }
+
+    // hybrid sampler: kombinasi Poisson & overdispersed
+    function sampleHybrid(lambdaBase){
+      lambdaBase = Math.max(lambdaBase, 0.00001);
+      const r = Math.random();
+      if (r < 0.6){
+        // 60% murni Poisson
+        return V20.samplePoisson(lambdaBase);
+      } else {
+        // 40%: lambda digeser (overdispersed)
+        const spread = 0.9 + normChaos*0.8; // chaos tinggi → spread makin lebar
+        const factor = Math.exp((Math.random()-0.5)*spread);
+        const lamVar = V20.clamp(lambdaBase*factor, 0.05, 6.0);
+        return V20.samplePoisson(lamVar);
+      }
+    }
+
+    for(let i=0;i<simCount;i++){
+      const sc = pickScenario();
+      scenarioCount[sc.name]++;
+
+      const lamH_sim = lamH * sc.fH;
+      const lamA_sim = lamA * sc.fA;
+
+      const h = sampleHybrid(lamH_sim);
+      const a = sampleHybrid(lamA_sim);
+
+      total++;
+      goalsTotal += (h+a);
+
+      if (h>a)      homeWins++;
+      else if(h===a)draws++;
+      else          awayWins++;
+
+      if (h<=scoreCap && a<=scoreCap){
+        matrix[h][a]++;
+      }
+    }
+
+    const pH = homeWins/total;
+    const pD = draws/total;
+    const pA = awayWins/total;
+    const avgGoals = goalsTotal/total;
+
+    // OU pakai λ total efektif (rata-rata skenario)
+    let factorAvg = 0;
+    scenarios.forEach(s=>{
+      factorAvg += s.p * ((s.fH + s.fA)/2);
+    });
+    const lamTotalEff = lamTotalBase * factorAvg;
+
+    const lines = [0.5,1.5,2.5,3.5];
+    const ou = {};
+    lines.forEach(line=>{
+      let under = 0;
+      const cut = Math.floor(line);
+      for(let k=0;k<=cut;k++){
+        under += V20.poissonPMF(lamTotalEff,k);
+      }
+      const over = 1-under;
+      ou[line.toString()] = {over,under};
+    });
+
+    return {
+      simCount,
+      pH,pD,pA,
+      avgGoals,
+      matrix,
+      scoreCap,
+      ou,
+      scenarioStats:{
+        scenarios:scenarios.map(s=>({name:s.name,p:s.p})),
+        count:scenarioCount
+      }
+    };
+  };
+
+
+  /* ===========================================
+     3) CHAOS MODEL (High Variance View)
+  =========================================== */
+  V20.chaosModel = function(lambda, ctx){
+    const chaosStrength = (ctx.chaos - 5)/5;
+    const factor = 1 + V20.clamp(chaosStrength*0.20, -0.18, 0.30);
+    return {
+      lamH: V20.clamp(lambda.lamH*factor, 0.2, 4.2),
+      lamA: V20.clamp(lambda.lamA*factor, 0.2, 4.2)
+    };
+  };
+
+
+  /* ===========================================
+     4) ANTI-BIAS COMPRESSOR
+  =========================================== */
+  V20.compress1x2 = function(pH,pD,pA, level){
+    function compress(x,c,f){ return c + (x-c)*f; }
+
+    let factor = 0.86;
+    if (level==="medium") factor = 0.76;
+    else if(level==="strong") factor=0.65;
+    else if(level==="ultra")  factor=0.55;
+
+    const c = 1/3;
+    const cH = compress(pH,c,factor);
+    const cD = compress(pD,c,factor);
+    const cA = compress(pA,c,factor);
+    const s  = cH + cD + cA;
+
+    return {pH:cH/s,pD:cD/s,pA:cA/s};
+  };
+
+
+  /* ===========================================
+     5) UNCERTAINTY (Entropi 1X2)
+  =========================================== */
+  V20.uncertainty = function(pH,pD,pA){
+    const probs = [pH,pD,pA];
+    let entropy = 0;
+    probs.forEach(p=>{
+      if (p>0) entropy -= p*Math.log2(p);
+    });
+    const max = Math.log2(3);
+    const norm = max>0 ? entropy/max : 0;
+    return {
+      entropy,
+      normEntropy:norm,
+      uncertaintyScore:norm*100
+    };
+  };
+
+
+  /* ===========================================
+     6) RISK INDEX
+  =========================================== */
+  V20.riskIndex = function(lambda, ctx, home, away, tact){
+    const totalLam = lambda.lamH + lambda.lamA;
+    const chaos    = ctx.chaos;
+    const flex     = tact.home.flex + tact.away.flex;
+    const stabAvg  = (home.stability + away.stability)/2;
+
+    let risk = 0;
+    risk += (totalLam-2.4)*18;
+    risk += (chaos-5)*7;
+    risk += flex*40;
+    risk -= (stabAvg-5)*4;
+
+    return V20.clamp(risk,0,100);
+  };
+
+
+  /* ===========================================
+     7) META CONSISTENCY
+  =========================================== */
+  V20.metaConsistency = function(det, mc, detChaos, finalProb){
+    const models = [
+      {pH:det.pH,      pD:det.pD,      pA:det.pA},
+      {pH:mc.pH,       pD:mc.pD,       pA:mc.pA},
+      {pH:detChaos.pH, pD:detChaos.pD, pA:detChaos.pA},
+      {pH:finalProb.pH,pD:finalProb.pD,pA:finalProb.pA}
+    ];
+    let sumDiff=0, count=0;
+    for(let i=0;i<models.length;i++){
+      for(let j=i+1;j<models.length;j++){
+        sumDiff += Math.abs(models[i].pH - models[j].pH);
+        sumDiff += Math.abs(models[i].pD - models[j].pD);
+        sumDiff += Math.abs(models[i].pA - models[j].pA);
+        count += 3;
+      }
+    }
+    const avgDiff = count? sumDiff/count : 0;
+    const score   = V20.clamp(100*(1-avgDiff/0.30),0,100);
+    return score;
+  };
+
+
+  /* ===========================================
+     8) BTTS PROBABILITY
+  =========================================== */
+  V20.bttsProb = function(lambda){
+    const lamH = lambda.lamH;
+    const lamA = lambda.lamA;
+    const pH0 = Math.exp(-lamH);
+    const pA0 = Math.exp(-lamA);
+    const p00 = Math.exp(-(lamH+lamA));
+    const pBTTS = 1 - (pH0 + pA0 - p00);
+    return V20.clamp(pBTTS,0,1);
+  };
+
+
+  /* ===========================================
+     9) FLOW BANDS (0'–90')
+  =========================================== */
+  V20.flowBands = function(lambda, ctx){
+    const totalLam = lambda.lamH + lambda.lamA;
+    const t = ctx.tempo;
+    const c = ctx.chaos;
+    const imp = ctx.importance;
+
+    const labels = [
+      "0'-10'","10'-20'","20'-30'","30'-40'",
+      "40'-50'","50'-60'","60'-70'","70'-80'","80'-90'"
+    ];
+    const segments=[];
+    const baseInt = (totalLam/3) + (t-5)*0.05 + (c-5)*0.05;
+
+    for(let i=0;i<labels.length;i++){
+      let mult = 1;
+      if      (i<=1) mult*=0.9;
+      else if (i<=3) mult*=1.05;
+      else if (i<=5) mult*=1.1;
+      else           mult*=1.15;
+
+      if (i>=6) mult *= 1 + (imp-5)*0.015;
+
+      const raw = baseInt * mult;
+      let level="sedang";
+      if (raw<=0.4) level="rendah";
+      else if (raw>=1.0) level="tinggi";
+
+      segments.push({
+        label: labels[i],
+        intensity: V20.clamp(raw,0.2,1.4),
+        level
+      });
+    }
+    return segments;
+  };
+
+
+  /* ===========================================
+     10) FUSI MODEL 1X2
+  =========================================== */
+  V20.fuseModels = function(det, mc, detChaos, biasLevel){
+    let wDet=0.24, wMC=0.52, wChaos=0.24;
+
+    let pH = det.pH*wDet + mc.pH*wMC + detChaos.pH*wChaos;
+    let pD = det.pD*wDet + mc.pD*wMC + detChaos.pD*wChaos;
+    let pA = det.pA*wDet + mc.pA*wMC + detChaos.pA*wChaos;
+    const s = pH+pD+pA;
+    pH/=s; pD/=s; pA/=s;
+
+    return V20.compress1x2(pH,pD,pA,biasLevel);
+  };
+
+
+  /* ===========================================
+     11) MOMENTUM SWING INDEX
+  =========================================== */
+  V20.momentumSwingIndex = function(home, away, tact){
+    const formGap  = home.momentum - away.momentum;
+    const pressGap = tact.home.pressIntensity - tact.away.pressIntensity;
+
+    let score = Math.abs(formGap)*12 + Math.abs(pressGap)*40;
+    const flexBoost = (tact.home.flex + tact.away.flex);
+    score += flexBoost*10;
+
+    return V20.clamp(score,0,100);
+  };
+
+
+  /* ===========================================
+     12) FRAGILITY INDEX
+  =========================================== */
+  V20.fragilityIndex = function(lambda, ctx, home, away){
+    const totalLam = lambda.lamH + lambda.lamA;
+    const chaos    = ctx.chaos;
+    const stabAvg  = (home.stability + away.stability)/2;
+
+    let f = 0;
+    f += (totalLam-2.4)*14;
+    f += (chaos-5)*8;
+    f -= (stabAvg-5)*6;
+
+    return V20.clamp(f,0,100);
+  };
+
+
+  /* ===========================================
+     13) SCENARIO DENSITY INDEX
+  =========================================== */
+  V20.scenarioDensityIndex = function(mc){
+    const mat  = mc.matrix;
+    const cap  = mc.scoreCap;
+    const total= mc.simCount || 1;
+    let maxCell = 0;
+    for(let h=0;h<=cap;h++){
+      for(let a=0;a<=cap;a++){
+        if (mat[h][a]>maxCell) maxCell = mat[h][a];
+      }
+    }
+    const pMax = maxCell/total; // skor paling sering
+    let sdi = 100*(1-(pMax/0.45));
+    return V20.clamp(sdi,0,100);
+  };
+
+})();
+</script>
+<!-- ============================= -->
+<!-- PART 8: GRAPHIC RENDERERS V20 -->
+<!-- ============================= -->
+<script>
+(function(){
+  const V20 = window.V20 = window.V20 || {};
+
+  /* ===========================================
+     RADAR DIAGRAM
+  =========================================== */
+  V20.renderRadar = function(id, homeTeam, awayTeam, tact){
+    const c = document.getElementById(id);
+    if (!c) return;
+    const ctx = c.getContext("2d");
+    const W = c.width, H = c.height;
+    const CX = W/2, CY = H/2;
+    const R  = Math.min(W,H)*0.35;
+
+    ctx.clearRect(0,0,W,H);
+
+    const labels = ["Atk","Def","Flex","Press"];
+    const valsH = [
+      V20.clamp(homeTeam.attackIdx/10,0,1),
+      V20.clamp(homeTeam.defenseIdx/10,0,1),
+      V20.clamp(tact.home.flex,0,1),
+      V20.clamp(tact.home.pressIntensity,0,1)
+    ];
+    const valsA = [
+      V20.clamp(awayTeam.attackIdx/10,0,1),
+      V20.clamp(awayTeam.defenseIdx/10,0,1),
+      V20.clamp(tact.away.flex,0,1),
+      V20.clamp(tact.away.pressIntensity,0,1)
+    ];
+    const axis = labels.length;
+
+    // grid
+    ctx.strokeStyle="#334155";
+    ctx.globalAlpha=0.6;
+    for(let r=1;r<=4;r++){
+      const rr=(R/4)*r;
+      ctx.beginPath();
+      for(let i=0;i<axis;i++){
+        const ang=(Math.PI*2/axis)*i - Math.PI/2;
+        const x=CX+rr*Math.cos(ang);
+        const y=CY+rr*Math.sin(ang);
+        if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+      }
+      ctx.closePath();
+      ctx.stroke();
+    }
+    ctx.globalAlpha=1;
+
+    // axis + label
+    ctx.font="10px system-ui";
+    ctx.fillStyle="#9ca3af";
+    ctx.strokeStyle="#475569";
+    for(let i=0;i<axis;i++){
+      const ang=(Math.PI*2/axis)*i - Math.PI/2;
+      const x=CX+R*Math.cos(ang);
+      const y=CY+R*Math.sin(ang);
+      ctx.beginPath();
+      ctx.moveTo(CX,CY);
+      ctx.lineTo(x,y);
+      ctx.stroke();
+      ctx.fillText(labels[i],x-12,y-4);
+    }
+
+    function draw(vals,stroke,fillAlpha){
+      ctx.beginPath();
+      for(let i=0;i<axis;i++){
+        const ang=(Math.PI*2/axis)*i - Math.PI/2;
+        const r=R*vals[i];
+        const x=CX+r*Math.cos(ang);
+        const y=CY+r*Math.sin(ang);
+        if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+      }
+      ctx.closePath();
+      ctx.strokeStyle=stroke;
+      ctx.globalAlpha=1;
+      ctx.stroke();
+      ctx.globalAlpha=fillAlpha;
+      ctx.fillStyle=stroke;
+      ctx.fill();
+      ctx.globalAlpha=1;
+    }
+
+    // Home (biru), Away (merah)
+    draw(valsH,"#3b82f6",0.18);
+    draw(valsA,"#f97373",0.18);
+  };
+
+
+  /* ===========================================
+     BALANCE BAR
+  =========================================== */
+  V20.renderBalance = function(id, homeTeam, awayTeam){
+    const c = document.getElementById(id);
+    if (!c) return;
+    const ctx = c.getContext("2d");
+    const W = c.width, H = c.height;
+    ctx.clearRect(0,0,W,H);
+
+    const mid = W/2;
+    ctx.fillStyle="#020617";
+    ctx.fillRect(0,0,W,H);
+
+    const barH=16;
+    const y=H/2-barH/2;
+
+    ctx.fillStyle="#1e293b";
+    ctx.fillRect(20,y,W-40,barH);
+
+    const atkH = V20.clamp(homeTeam.attackIdx/10,0,1);
+    const atkA = V20.clamp(awayTeam.attackIdx/10,0,1);
+
+    ctx.fillStyle="#3b82f6";
+    ctx.fillRect(mid - atkH*(mid-20), y, atkH*(mid-20), barH);
+
+    ctx.fillStyle="#f97373";
+    ctx.fillRect(mid, y, atkA*(mid-20), barH);
+
+    ctx.font="10px system-ui";
+    ctx.fillStyle="#e5e7eb";
+    ctx.fillText("HOME ATK",24,14);
+    ctx.fillText("AWAY ATK",W-80,14);
+  };
+
+
+  /* ===========================================
+     RISK & UNCERTAINTY BAR
+  =========================================== */
+  V20.renderRisk = function(id, risk, unc){
+    const c = document.getElementById(id);
+    if (!c) return;
+    const ctx = c.getContext("2d");
+    const W = c.width, H = c.height;
+    ctx.clearRect(0,0,W,H);
+
+    ctx.font="11px system-ui";
+    ctx.fillStyle="#e5e7eb";
+    ctx.fillText("Risk Index (0–100)",10,18);
+    ctx.fillText("Uncertainty (0–100)",10,44);
+
+    const barW = W-40;
+    const barH = 10;
+    const x0   = 20;
+    const yR   = 28;
+    const yU   = 54;
+
+    function drawBar(y,val){
+      ctx.fillStyle="#020617";
+      ctx.fillRect(x0,y,barW,barH);
+      let color="#22c55e";
+      if (val>66) color="#f97373";
+      else if (val>33) color="#eab308";
+      ctx.fillStyle=color;
+      ctx.fillRect(x0,y,barW*(val/100),barH);
+    }
+
+    drawBar(yR,risk);
+    drawBar(yU,unc);
+  };
+
+
+  /* ===========================================
+     SCORE MATRIX (TABEL)
+  =========================================== */
+  V20.renderScoreMatrix = function(containerId,matrix,cap,hName,aName){
+    const wrap = document.getElementById(containerId);
+    if (!wrap) return;
+    if (!matrix){
+      wrap.textContent = "Belum ada matrix.";
+      return;
+    }
+    let total=0;
+    for(let h=0;h<=cap;h++){
+      for(let a=0;a<=cap;a++){
+        total += matrix[h][a];
+      }
+    }
+
+    let html = "<table><thead><tr><th>"+(hName||"Home")+" \\ "+(aName||"Away")+"</th>";
+    for(let a=0;a<=cap;a++){
+      html += "<th>"+a+"</th>";
+    }
+    html += "</tr></thead><tbody>";
+
+    for(let h=0;h<=cap;h++){
+      html += "<tr><th>"+h+"</th>";
+      for(let a=0;a<=cap;a++){
+        const c = matrix[h][a];
+        const p = total>0 ? (c/total*100) : 0;
+        html += "<td>"+p.toFixed(1)+"%</td>";
+      }
+      html += "</tr>";
+    }
+    html += "</tbody></table>";
+    wrap.innerHTML = html;
+  };
+
+
+  /* ===========================================
+     FLOW 0'–90'
+  =========================================== */
+  V20.renderFlow = function(id,bands){
+    const c = document.getElementById(id);
+    if (!c) return;
+    const ctx = c.getContext("2d");
+    const W = c.width, H = c.height;
+    ctx.clearRect(0,0,W,H);
+
+    const padL=40, padR=10, padT=20, padB=30;
+    const usableW=W-padL-padR;
+    const usableH=H-padT-padB;
+
+    ctx.font="11px system-ui";
+    ctx.fillStyle="#e5e7eb";
+    ctx.fillText("Predictive Flow (0'–90')",10,14);
+
+    // axis
+    ctx.strokeStyle="#1e293b";
+    ctx.beginPath();
+    ctx.moveTo(padL,padT);
+    ctx.lineTo(padL,H-padB);
+    ctx.lineTo(W-padR,H-padB);
+    ctx.stroke();
+
+    const n=bands.length;
+    if (!n) return;
+    const stepX = usableW/(n-1 || 1);
+
+    let maxInt=0, minInt=999;
+    bands.forEach(b=>{
+      if (b.intensity>maxInt) maxInt=b.intensity;
+      if (b.intensity<minInt) minInt=b.intensity;
+    });
+
+    const norm = v=>{
+      if (maxInt>minInt) return (v-minInt)/(maxInt-minInt);
+      return 0.5;
+    };
+
+    // garis flow
+    ctx.beginPath();
+    for(let i=0;i<n;i++){
+      const vx = padL+stepX*i;
+      const ny = norm(bands[i].intensity);
+      const vy = (H-padB) - ny*usableH;
+      if(i===0) ctx.moveTo(vx,vy); else ctx.lineTo(vx,vy);
+    }
+    ctx.strokeStyle="#3b82f6";
+    ctx.lineWidth=2;
+    ctx.stroke();
+
+    // titik + label menit
+    ctx.font="9px system-ui";
+    bands.forEach((b,i)=>{
+      const vx = padL+stepX*i;
+      const ny = norm(b.intensity);
+      const vy = (H-padB) - ny*usableH;
+      ctx.beginPath();
+      ctx.arc(vx,vy,3,0,Math.PI*2);
+      ctx.fillStyle="#3b82f6";
+      ctx.fill();
+      ctx.fillStyle="#9ca3af";
+      ctx.fillText(b.label, vx-18, H-10);
+    });
+  };
+
+})();
+</script>
+<!-- ========================================= -->
+<!-- PART 9: REPORT + NARASI + STORYLINE v20  -->
+<!-- ========================================= -->
+<script>
+(function(){
+  const V20 = window.V20 = window.V20 || {};
+
+
+  /* ===========================================================
+     1) REPORT ANGKA LENGKAP
+  =========================================================== */
+  V20.buildReport = function(res){
+    const {lambda, det, detChaos, mc, fused, indices, hName, aName} = res;
+
+    let text = "";
+    text += "=== MATCH PREDICTION REPORT (v2000000) ===\n\n";
+    text += `Match: ${hName} vs ${aName}\n\n`;
+
+    text += "---- Expected Goals (λ) ----\n";
+    text += `λ Home: ${lambda.lamH.toFixed(3)}\n`;
+    text += `λ Away: ${lambda.lamA.toFixed(3)}\n\n`;
+
+    text += "---- 1X2 Probabilities (Final Fused) ----\n";
+    text += `Home: ${(fused.pH*100).toFixed(2)}%\n`;
+    text += `Draw: ${(fused.pD*100).toFixed(2)}%\n`;
+    text += `Away: ${(fused.pA*100).toFixed(2)}%\n\n`;
+
+    text += "---- OU Probabilities (Monte Carlo Effective) ----\n";
+    Object.keys(mc.ou).forEach(line=>{
+      text += `O${line}: ${(mc.ou[line].over*100).toFixed(2)}%  |  U${line}: ${(mc.ou[line].under*100).toFixed(2)}%\n`;
+    });
+    text += "\n";
+
+    text += "---- BTTS ----\n";
+    text += `BTTS Yes: ${(res.btts*100).toFixed(2)}%\n`;
+    text += `BTTS No : ${((1-res.btts)*100).toFixed(2)}%\n\n`;
+
+    text += "---- Risk / Uncertainty / Meta ----\n";
+    text += `Risk Index: ${indices.risk.toFixed(1)}\n`;
+    text += `Uncertainty: ${indices.uncertainty.toFixed(1)}\n`;
+    text += `Meta Consistency: ${indices.meta.toFixed(1)}\n`;
+    text += `Momentum Swing Index: ${indices.msi.toFixed(1)}\n`;
+    text += `Fragility Index: ${indices.frag.toFixed(1)}\n`;
+    text += `Scenario Density Index: ${indices.sdi.toFixed(1)}\n\n`;
+
+    text += "---- Average Goals (MC) ----\n";
+    text += `Avg Goals: ${mc.avgGoals.toFixed(3)}\n\n`;
+
+    text += "---- Scenario Layers (Monte Carlo) ----\n";
+    mc.scenarioStats.scenarios.forEach(s=>{
+      const count = mc.scenarioStats.count[s.name] || 0;
+      text += `${s.name}: ${(s.p*100).toFixed(2)}% (count ${count})\n`;
+    });
+
+    text += "\n=== END REPORT ===";
+
+    return text;
+  };
+
+
+
+  /* ===========================================================
+     2) NARASI ANALIS PROFESIONAL
+  =========================================================== */
+  V20.buildNarrative = function(res){
+    const {fused, lambda, indices, hName, aName} = res;
+
+    const ph = fused.pH;
+    const pd = fused.pD;
+    const pa = fused.pA;
+
+    let lead;
+    if (ph > pa && ph > pd) lead = hName;
+    else if (pa > ph && pa > pd) lead = aName;
+    else lead = "Pertandingan cenderung seimbang";
+
+    let text = "";
+    text += "=== ANALYST VIEW (v2000000) ===\n\n";
+
+    text += `Secara probabilitas akhir, ${lead} memiliki keunggulan relatif tipis dalam model v2000000.\n`;
+    text += `Nilai λ menunjukkan pola serangan: Home ≈ ${lambda.lamH.toFixed(2)}, Away ≈ ${lambda.lamA.toFixed(2)}.\n`;
+
+    if (indices.uncertainty > 65){
+      text += "Tingkat ketidakpastian tinggi. Pola pertandingan diprediksi fluktuatif.\n";
+    } else if (indices.uncertainty < 40){
+      text += "Ketidakpastian rendah. Model relatif stabil dan pola permainan diprediksi konsisten.\n";
+    } else {
+      text += "Ketidakpastian sedang. Kedua tim masih memiliki jalur yang cukup terbuka.\n";
+    }
+
+    if (indices.risk > 65){
+      text += "Risk Index tinggi → kemungkinan terjadi momen-momen chaos dan peluang beruntun.\n";
+    } else if (indices.risk < 35){
+      text += "Risk Index rendah → pertandingan cenderung lebih rapat.\n";
+    } else {
+      text += "Risk Index sedang → permainan seimbang antara kehati-hatian dan agresi.\n";
+    }
+
+    if (indices.msi > 60){
+      text += "Momentum Swing Index tinggi → potensi kejutan, ayunan momentum drastis.\n";
+    } else if (indices.msi < 30){
+      text += "MSI rendah → pertandingan lebih linier, potensi kejutan kecil.\n";
+    }
+
+    if (indices.frag > 60){
+      text += "Fragility Index tinggi → salah satu tim berpotensi ambruk jika kebobolan duluan.\n";
+    }
+
+    text += "\n=== END ANALYST VIEW ===";
+    return text;
+  };
+
+
+
+  /* ===========================================================
+     3) STORYLINE PERTANDINGAN (REALISTIC MATCH FLOW)
+  =========================================================== */
+  V20.buildStoryline = function(res){
+    const {lambda, indices, fused, hName, aName} = res;
+    const ph = fused.pH, pa = fused.pA;
+    const lamH = lambda.lamH, lamA = lambda.lamA;
+
+    const likelyLead =
+      ph > pa ? hName :
+      pa > ph ? aName : "Seimbang";
+
+    let text = "";
+    text += "=== MATCH STORYLINE v2000000 ===\n\n";
+
+    // BABAK 1
+    text += "⚽ BABAK PERTAMA:\n";
+    if (lambda.lamH + lambda.lamA < 1.8){
+      text += "Laga dimulai dengan tempo sedang, kedua tim masih fokus menjaga struktur defensif.\n";
+    } else {
+      text += "Kick-off langsung diwarnai tekanan cepat dari kedua pihak.\n";
+    }
+
+    if (indices.msi > 50){
+      text += "Momentum terlihat ayun cepat sejak menit-menit awal.\n";
+    }
+
+    // MID GAME
+    text += "\n⚽ MENIT 30–60:\n";
+    if (likelyLead === hName){
+      text += `${hName} mulai terlihat menguasai build-up, terutama melalui sisi tengah.\n`;
+    } else if (likelyLead === aName){
+      text += `${aName} lebih efektif dalam transisi cepat dan mampu memaksa lawan mundur.\n`;
+    } else {
+      text += "Kedua tim bergantian menguasai bola, pergerakan bola masih cukup seimbang.\n";
+    }
+
+    if (indices.frag > 55){
+      text += "Pada fase ini, salah satu tim tampak mudah goyah ketika ditekan.\n";
+    }
+
+    // BABAK 2
+    text += "\n⚽ BABAK KEDUA:\n";
+    if (indices.risk > 60){
+      text += "Laga berubah menjadi lebih agresif di babak kedua.\n";
+    } else {
+      text += "Permainan masih cukup terkontrol meski peluang mulai muncul.\n";
+    }
+
+    if (lamH > lamA){
+      text += `${hName} terlihat lebih banyak menciptakan peluang berbahaya.\n`;
+    } else if (lamA > lamH){
+      text += `${aName} memiliki produksi peluang lebih tinggi pada fase akhir.\n`;
+    }
+
+    // AKHIR LAGA
+    text += "\n⚽ MENIT AKHIR & HASIL POTENSIAL:\n";
+    if (indices.uncertainty > 70){
+      text += "Menit-menit akhir berlangsung liar dan sulit diprediksi.\n";
+    } else {
+      text += "Pertandingan memasuki fase akhir dengan alur cukup jelas.\n";
+    }
+
+    text += `Hasil paling konsisten dalam model: `;
+    if (ph > pa && ph > fused.pD) text += `${hName} berpeluang menang tipis.`;
+    else if (pa > ph && pa > fused.pD) text += `${aName} berpeluang unggul tipis.`;
+    else text += "skor imbang cukup mungkin.";
+
+    text += "\n\n=== END STORYLINE ===";
+    return text;
+  };
+
+
+})();
+</script>
+<!-- ====================================== -->
+<!-- PART 10: ANALYZE + CLEAR + INIT EVENT -->
+<!-- ====================================== -->
+<script>
+(function(){
+  const V20 = window.V20 = window.V20 || {};
+
+  // --------- KUMPUL INPUT DARI FORM ---------
+  function collectInputs(){
+    return {
+      // match info
+      m_title:   document.getElementById("m_title")?.value || "",
+      m_league:  document.getElementById("m_league")?.value || "",
+      m_date:    document.getElementById("m_date")?.value || "",
+      m_time:    document.getElementById("m_time")?.value || "",
+      m_note:    document.getElementById("m_note")?.value || "",
+
+      // tim home
+      h_name:     document.getElementById("h_name")?.value || "",
+      h_gpg:      document.getElementById("h_gpg")?.value || "",
+      h_gc:       document.getElementById("h_gc")?.value || "",
+      h_xg:       document.getElementById("h_xg")?.value || "",
+      h_xga:      document.getElementById("h_xga")?.value || "",
+      h_form:     document.getElementById("h_form")?.value || "",
+      h_quality:  document.getElementById("h_quality")?.value || "",
+      h_stab:     document.getElementById("h_stab")?.value || "",
+
+      // tim away
+      a_name:     document.getElementById("a_name")?.value || "",
+      a_gpg:      document.getElementById("a_gpg")?.value || "",
+      a_gc:       document.getElementById("a_gc")?.value || "",
+      a_xg:       document.getElementById("a_xg")?.value || "",
+      a_xga:      document.getElementById("a_xga")?.value || "",
+      a_form:     document.getElementById("a_form")?.value || "",
+      a_quality:  document.getElementById("a_quality")?.value || "",
+      a_stab:     document.getElementById("a_stab")?.value || "",
+
+      // absensi
+      h_abs_gk:   document.getElementById("h_abs_gk")?.value || "",
+      h_abs_df:   document.getElementById("h_abs_df")?.value || "",
+      h_abs_md:   document.getElementById("h_abs_md")?.value || "",
+      h_abs_fw:   document.getElementById("h_abs_fw")?.value || "",
+      a_abs_gk:   document.getElementById("a_abs_gk")?.value || "",
+      a_abs_df:   document.getElementById("a_abs_df")?.value || "",
+      a_abs_md:   document.getElementById("a_abs_md")?.value || "",
+      a_abs_fw:   document.getElementById("a_abs_fw")?.value || "",
+
+      // taktik home
+      h_form1:    document.getElementById("h_form1")?.value || "",
+      h_form2:    document.getElementById("h_form2")?.value || "",
+      h_form3:    document.getElementById("h_form3")?.value || "",
+      h_style:    document.getElementById("h_style")?.value || "",
+      h_width:    document.getElementById("h_width")?.value || "",
+      h_compact:  document.getElementById("h_compact")?.value || "",
+      h_line:     document.getElementById("h_line")?.value || "",
+      h_vertical: document.getElementById("h_vertical")?.value || "",
+
+      // taktik away
+      a_form1:    document.getElementById("a_form1")?.value || "",
+      a_form2:    document.getElementById("a_form2")?.value || "",
+      a_form3:    document.getElementById("a_form3")?.value || "",
+      a_style:    document.getElementById("a_style")?.value || "",
+      a_width:    document.getElementById("a_width")?.value || "",
+      a_compact:  document.getElementById("a_compact")?.value || "",
+      a_line:     document.getElementById("a_line")?.value || "",
+      a_vertical: document.getElementById("a_vertical")?.value || "",
+
+      // psikologi & xThreat
+      psy_mot:    document.getElementById("psy_mot")?.value || "",
+      psy_press:  document.getElementById("psy_press")?.value || "",
+      psy_crowd:  document.getElementById("psy_crowd")?.value || "",
+      h_xt:       document.getElementById("h_xt")?.value || "",
+      a_xt:       document.getElementById("a_xt")?.value || "",
+      finishing:  document.getElementById("finishing")?.value || "",
+
+      // H2H
+      h2h_raw:    document.getElementById("h2h_input")?.value || "",
+
+      // Simulasi
+      sim_count:  document.getElementById("sim_count")?.value || "",
+      score_cap:  document.getElementById("score_cap")?.value || "",
+      bias_level: document.getElementById("bias_level")?.value || "soft"
+    };
+  }
+
+  // --------- PRESET SIM ---------
+  function applyPresetSim(type){
+    const sim = document.getElementById("sim_count");
+    const cap = document.getElementById("score_cap");
+    if (!sim || !cap) return;
+    if (type === "fast"){ sim.value="15000";  cap.value="5"; }
+    else if (type === "std"){ sim.value="30000"; cap.value="5"; }
+    else if (type === "max"){ sim.value="60000"; cap.value="6"; }
+    else if (type === "ultra"){ sim.value="100000"; cap.value="6"; }
+  }
+
+  // --------- H2H PARSE & CLEAR ---------
+  function runH2HParse(){
+    const raw = document.getElementById("h2h_input")?.value || "";
+    const out = document.getElementById("h2h_result");
+    const res = V20.parseH2H(raw);
+    if (!out) return;
+
+    if (!res.n){
+      out.textContent = "Tidak ada skor valid yang terbaca.";
+      return;
+    }
+    out.textContent =
+      "Sample: "+res.n+
+      " | Home Avg: "+res.homeAvg.toFixed(2)+
+      " | Away Avg: "+res.awayAvg.toFixed(2)+
+      " | Total Avg: "+res.totalAvg.toFixed(2)+
+      " | Pola: "+res.trend;
+  }
+
+  function runH2HClear(){
+    const ta  = document.getElementById("h2h_input");
+    const out = document.getElementById("h2h_result");
+    if (ta) ta.value = "";
+    if (out) out.textContent = "H2H belum diproses.";
+  }
+
+  // --------- ABSENSI SUMMARY ---------
+  function runAbsCalc(){
+    const h_gk = document.getElementById("h_abs_gk")?.value || "";
+    const h_df = document.getElementById("h_abs_df")?.value || "";
+    const h_md = document.getElementById("h_abs_md")?.value || "";
+    const h_fw = document.getElementById("h_abs_fw")?.value || "";
+    const a_gk = document.getElementById("a_abs_gk")?.value || "";
+    const a_df = document.getElementById("a_abs_df")?.value || "";
+    const a_md = document.getElementById("a_abs_md")?.value || "";
+    const a_fw = document.getElementById("a_abs_fw")?.value || "";
+
+    const hAbs = V20.absenceImpact(h_gk,h_df,h_md,h_fw);
+    const aAbs = V20.absenceImpact(a_gk,a_df,a_md,a_fw);
+
+    const out = document.getElementById("abs_info");
+    if (out){
+      out.textContent =
+        "Home Severity: "+hAbs.severity.toFixed(1)+
+        " | Away Severity: "+aAbs.severity.toFixed(1)+
+        " (nilai 0-10, semakin tinggi = absensi makin berat)";
+    }
+  }
+
+  // --------- ANALYZE UTAMA ---------
+  function runAnalyze(){
+    const panel = document.getElementById("result_panel");
+    const narr  = document.getElementById("analyst_panel");
+    if (panel) panel.textContent = "Memproses v2000000...";
+    if (narr)  narr.textContent  = "Menyusun narasi v2000000...";
+
+    const inp = collectInputs();
+
+    // Parse H2H
+    const h2h = V20.parseH2H(inp.h2h_raw);
+
+    // Absensi
+    const absH = V20.absenceImpact(inp.h_abs_gk,inp.h_abs_df,inp.h_abs_md,inp.h_abs_fw);
+    const absA = V20.absenceImpact(inp.a_abs_gk,inp.a_abs_df,inp.a_abs_md,inp.a_abs_fw);
+
+    // Build Team
+    const homeTeam = V20.buildTeam({
+      gpg:inp.h_gpg,
+      gc: inp.h_gc,
+      xg: inp.h_xg,
+      xga:inp.h_xga,
+      quality:inp.h_quality,
+      stab:inp.h_stab,
+      form:inp.h_form
+    }, absH);
+
+    const awayTeam = V20.buildTeam({
+      gpg:inp.a_gpg,
+      gc: inp.a_gc,
+      xg: inp.a_xg,
+      xga:inp.a_xga,
+      quality:inp.a_quality,
+      stab:inp.a_stab,
+      form:inp.a_form
+    }, absA);
+
+    // Tactical Vectors
+    const tactHome = V20.buildTacticalVector("h", inp);
+    const tactAway = V20.buildTacticalVector("a", inp);
+    const tact = {home:tactHome, away:tactAway};
+
+    // Extra ctx (xT, finishing, psy)
+    const extra2 = {
+      h_xt:      V20.num(inp.h_xt),
+      a_xt:      V20.num(inp.a_xt),
+      finishing: V20.num(inp.finishing),
+      psy_mot:   V20.num(inp.psy_mot),
+      psy_press: V20.num(inp.psy_press),
+      psy_crowd: V20.num(inp.psy_crowd)
+    };
+
+    const ctx = V20.buildContext({}, h2h, extra2, tact);
+
+    // Lambda
+    const lambda = V20.buildLambda(homeTeam,awayTeam,ctx,h2h,tact);
+
+    // Deterministic
+    const det = V20.detSim(lambda);
+
+    // Chaos View
+    const chaosLambda = V20.chaosModel(lambda,ctx);
+    const detChaos    = V20.detSim(chaosLambda);
+
+    // Monte Carlo
+    const simCount = V20.num(inp.sim_count) || 30000;
+    const scoreCap = V20.num(inp.score_cap) || 5;
+    const mc       = V20.monteCarlo(lambda,ctx,simCount,scoreCap);
+
+    // Fusion
+    const fused = V20.fuseModels(det,mc,detChaos, inp.bias_level || "soft");
+
+    // Indices
+    const unc  = V20.uncertainty(fused.pH,fused.pD,fused.pA);
+    const risk = V20.riskIndex(lambda,ctx,homeTeam,awayTeam,tact);
+    const meta = V20.metaConsistency(det,mc,detChaos,fused);
+    const btts = V20.bttsProb(lambda);
+    const bands= V20.flowBands(lambda,ctx);
+    const msi  = V20.momentumSwingIndex(homeTeam,awayTeam,tact);
+    const frag = V20.fragilityIndex(lambda,ctx,homeTeam,awayTeam);
+    const sdi  = V20.scenarioDensityIndex(mc);
+
+    const indices = {
+      risk,
+      uncertainty: unc.uncertaintyScore,
+      meta,
+      msi,
+      frag,
+      sdi
+    };
+
+    const hName = inp.h_name || "Home";
+    const aName = inp.a_name || "Away";
+
+    const res = {
+      lambda,
+      det,
+      detChaos,
+      mc,
+      fused,
+      indices,
+      btts,
+      hName,
+      aName
+    };
+
+    // Report & Narrative & Storyline
+    if (panel) panel.textContent = V20.buildReport(res);
+    if (narr)  narr.textContent  = V20.buildNarrative(res) + "\n\n" + V20.buildStoryline(res);
+
+    // Grafik
+    V20.renderRadar("v20_radar", homeTeam, awayTeam, tact);
+    V20.renderBalance("v20_balance", homeTeam, awayTeam);
+    V20.renderRisk("v20_risk", risk, unc.uncertaintyScore);
+    V20.renderFlow("v20_flow", bands);
+    V20.renderScoreMatrix("score_matrix_wrap", mc.matrix, mc.scoreCap, hName, aName);
+
+    // Pills
+    const up   = document.getElementById("uncert_pill");
+    const rp   = document.getElementById("risk_pill");
+    const mp   = document.getElementById("meta_pill");
+    const msiP = document.getElementById("msi_pill");
+    const fgP  = document.getElementById("frag_pill");
+    const sdiP = document.getElementById("sdi_pill");
+
+    if (up)   up.textContent   = "Uncertainty: "+unc.uncertaintyScore.toFixed(1);
+    if (rp)   rp.textContent   = "Risk Index: "+risk.toFixed(1);
+    if (mp)   mp.textContent   = "Meta Consistency: "+meta.toFixed(1);
+    if (msiP) msiP.textContent = "MSI: "+msi.toFixed(1);
+    if (fgP)  fgP.textContent  = "Frag: "+frag.toFixed(1);
+    if (sdiP) sdiP.textContent = "SDI: "+sdi.toFixed(1);
+  }
+
+  // --------- CLEAR ALL ---------
+  function clearAll(){
+    const ids = [
+      "m_title","m_league","m_date","m_time","m_note",
+      "h_name","h_gpg","h_gc","h_xg","h_xga","h_form","h_quality","h_stab",
+      "a_name","a_gpg","a_gc","a_xg","a_xga","a_form","a_quality","a_stab",
+      "h_abs_gk","h_abs_df","h_abs_md","h_abs_fw",
+      "a_abs_gk","a_abs_df","a_abs_md","a_abs_fw",
+      "h_form1","h_form2","h_form3","h_width","h_compact","h_line","h_vertical",
+      "a_form1","a_form2","a_form3","a_width","a_compact","a_line","a_vertical",
+      "psy_mot","psy_press","psy_crowd","h_xt","a_xt","finishing",
+      "h2h_input","sim_count","score_cap"
+    ];
+    ids.forEach(id=>{
+      const el = document.getElementById(id);
+      if (el) el.value = "";
+    });
+
+    const hs = document.getElementById("h_style");
+    const as = document.getElementById("a_style");
+    const bl = document.getElementById("bias_level");
+    if (hs) hs.value = "";
+    if (as) as.value = "";
+    if (bl) bl.value = "soft";
+
+    const absInfo = document.getElementById("abs_info");
+    if (absInfo) absInfo.textContent = "Absensi belum dihitung.";
+    const h2hR = document.getElementById("h2h_result");
+    if (h2hR) h2hR.textContent = "H2H belum diproses.";
+
+    const panel = document.getElementById("result_panel");
+    const narr  = document.getElementById("analyst_panel");
+    if (panel) panel.textContent = "Belum ada analisis. Tekan ANALYZE.";
+    if (narr)  narr.textContent  = "Belum ada narasi.";
+
+    const sm = document.getElementById("score_matrix_wrap");
+    if (sm) sm.textContent = "Belum ada matrix. Tekan ANALYZE.";
+
+    ["v20_radar","v20_balance","v20_risk","v20_flow"].forEach(id=>{
+      const c = document.getElementById(id);
+      if (c){
+        const ctx = c.getContext("2d");
+        ctx.clearRect(0,0,c.width,c.height);
+      }
+    });
+
+    const up   = document.getElementById("uncert_pill");
+    const rp   = document.getElementById("risk_pill");
+    const mp   = document.getElementById("meta_pill");
+    const msiP = document.getElementById("msi_pill");
+    const fgP  = document.getElementById("frag_pill");
+    const sdiP = document.getElementById("sdi_pill");
+
+    if (up)   up.textContent   = "Uncertainty: -";
+    if (rp)   rp.textContent   = "Risk Index: -";
+    if (mp)   mp.textContent   = "Meta Consistency: -";
+    if (msiP) msiP.textContent = "MSI: -";
+    if (fgP)  fgP.textContent  = "Frag: -";
+    if (sdiP) sdiP.textContent = "SDI: -";
+  }
+
+  // --------- INIT LISTENER ---------
+  document.addEventListener("DOMContentLoaded", function(){
+    // H2H
+    const h2hP = document.getElementById("btn_h2h_parse");
+    const h2hC = document.getElementById("btn_h2h_clear");
+    if (h2hP) h2hP.addEventListener("click", runH2HParse);
+    if (h2hC) h2hC.addEventListener("click", runH2HClear);
+
+    // Absensi
+    const absBtn = document.getElementById("btn_abs_calc");
+    if (absBtn) absBtn.addEventListener("click", runAbsCalc);
+
+    // Preset Sim
+    const simF = document.getElementById("preset_sim_fast");
+    const simS = document.getElementById("preset_sim_std");
+    const simM = document.getElementById("preset_sim_max");
+    const simU = document.getElementById("preset_sim_ultra");
+    if (simF) simF.addEventListener("click", ()=>applyPresetSim("fast"));
+    if (simS) simS.addEventListener("click", ()=>applyPresetSim("std"));
+    if (simM) simM.addEventListener("click", ()=>applyPresetSim("max"));
+    if (simU) simU.addEventListener("click", ()=>applyPresetSim("ultra"));
+
+    // ANALYZE & CLEAR
+    const btnAnal = document.getElementById("btn_analyze");
+    const btnClr  = document.getElementById("btn_clear");
+    if (btnAnal) btnAnal.addEventListener("click", runAnalyze);
+    if (btnClr)  btnClr.addEventListener("click", clearAll);
+  });
+
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Prediksi Bola Engine — Final</title>
+<style>
+body {
+    background:#111;
+    color:#eee;
+    font-family:Arial, sans-serif;
+    padding:20px;
+}
+.container {
+    max-width:1100px;
+    margin:auto;
+}
+.card {
+    background:#1a1a1a;
+    padding:15px;
+    border-radius:10px;
+    margin-bottom:20px;
+    border:1px solid #333;
+}
+.card h2 {
+    margin-top:0;
+    color:#58a6ff;
+}
+input, select {
+    width:100%;
+    padding:8px;
+    background:#000;
+    border:1px solid #444;
+    color:#fff;
+    border-radius:5px;
+    margin-top:4px;
+    margin-bottom:10px;
+}
+button {
+    background:#007bff;
+    border:none;
+    padding:10px 18px;
+    border-radius:6px;
+    color:white;
+    margin:5px 0;
+    cursor:pointer;
+}
+button:hover {
+    background:#2491ff;
+}
+textarea {
+    width:100%;
+    height:260px;
+    background:#000;
+    border:1px solid #444;
+    padding:10px;
+    color:#0f0;
+    border-radius:6px;
+    margin-top:10px;
+    white-space:pre-wrap;
+}
+.flex {
+    display:flex;
+    gap:10px;
+}
+.flex > div {
+    flex:1;
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="card">
+    <h2>Prediksi Bola — UI Parlay_Good v3</h2>
+    <div class="flex">
+        <div>
+            <label>Tim Home</label>
+            <input id="home_team" placeholder="Contoh: Fulham">
+            <label>xG Home</label>
+            <input id="home_xg">
+            <label>xGA Home</label>
+            <input id="home_xga">
+            <label>Error Def Home</label>
+            <input id="home_err">
+            <label>Stability Home</label>
+            <input id="home_stab">
+            <label>Momentum Home</label>
+            <input id="home_mom">
+        </div>
+
+        <div>
+            <label>Tim Away</label>
+            <input id="away_team" placeholder="Contoh: Man City">
+            <label>xG Away</label>
+            <input id="away_xg">
+            <label>xGA Away</label>
+            <input id="away_xga">
+            <label>Error Def Away</label>
+            <input id="away_err">
+            <label>Stability Away</label>
+            <input id="away_stab">
+            <label>Momentum Away</label>
+            <input id="away_mom">
+        </div>
+    </div>
+
+    <label>Pressing Home</label>
+    <input id="home_press">
+
+    <label>Pressing Away</label>
+    <input id="away_press">
+
+    <label>Match Importance (1–5)</label>
+    <input id="match_importance" value="3">
+
+    <button id="btn_auto">Auto Calc (TCI + Pressing)</button>
+</div>
+
+<div class="card">
+    <h2>Engine Tombol</h2>
+    <button id="btn_analyze">PRIME</button>
+    <button id="btn_hybrid">HYBRID</button>
+    <button id="btn_grand_unified">INFINITY</button>
+    <button id="btn_dxg">Dynamic xG</button>
+    <button id="btn_ou_heat">OU Heat</button>
+    <button id="btn_scoregrid">Correct Score Grid</button>
+    <button id="btn_brm">BRM</button>
+</div>
+
+<div class="card">
+    <h2>Output</h2>
+    <textarea id="analysis_output"></textarea>
+</div>
+
+<!-- ========================================== -->
+<!-- PART 2 SCRIPT lanjut di bawah -->
+<!-- ========================================== -->
+<script>
+// ======================================================
+// PART 2 — CORE ENGINE (PSZ) + UTILITAS
+// ======================================================
+const PSZ = {
+    state: {},
+
+    el(id) {
+        return document.getElementById(id);
+    },
+
+    num(id) {
+        const el = this.el(id);
+        if (!el) return 0;
+        const v = parseFloat(el.value.toString().replace(",", "."));
+        return isNaN(v) ? 0 : v;
+    },
+
+    val(id) {
+        const el = this.el(id);
+        return el ? el.value : "";
+    },
+
+    log(msg) {
+        const ta = this.el("analysis_output");
+        if (!ta) return;
+        const time = new Date().toLocaleTimeString();
+        ta.value += `[${time}] ${msg}\n`;
+        ta.scrollTop = ta.scrollHeight;
+    }
+};
+
+// ------------------------------------------------------
+// Helper: ambil nama tim + xG dasar
+// ------------------------------------------------------
+PSZ.getTeams = function () {
+    return {
+        home: PSZ.val("home_team") || "HOME",
+        away: PSZ.val("away_team") || "AWAY"
+    };
+};
+
+PSZ.getBaseXG = function () {
+    return {
+        hxg: PSZ.num("home_xg"),
+        axg: PSZ.num("away_xg"),
+        hxga: PSZ.num("home_xga"),
+        axga: PSZ.num("away_xga")
+    };
+};
+
+// ------------------------------------------------------
+// Helper: pressing
+// ------------------------------------------------------
+PSZ.getPressing = function () {
+    let pressH = PSZ.num("home_press");
+    let pressA = PSZ.num("away_press");
+
+    // default kalau kosong
+    if (!pressH) pressH = 7;
+    if (!pressA) pressA = 7;
+
+    return { pressH, pressA };
+};
+
+// ======================================================
+// PART 3 — TCI FUSION v9 (FIX = Part F)
+// ======================================================
+PSZ.autoTCI = function () {
+    PSZ.log("=== AUTO TCI v9 START ===");
+
+    const { pressH, pressA } = PSZ.getPressing();
+
+    const errH  = PSZ.num("home_err");
+    const errA  = PSZ.num("away_err");
+    const stabH = PSZ.num("home_stab");
+    const stabA = PSZ.num("away_stab");
+    const momH  = PSZ.num("home_mom");
+    const momA  = PSZ.num("away_mom");
+
+    const impRaw = PSZ.val("match_importance") || 3;
+    let importance = Number(impRaw);
+
+    const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+
+    // -----------------------------
+    // TEMPO per tim
+    // -----------------------------
+    let tempoH = (pressH * 0.8) + (momH * 0.5) - (stabH * 0.3);
+    let tempoA = (pressA * 0.8) + (momA * 0.5) - (stabA * 0.3);
+
+    // -----------------------------
+    // CHAOS per tim
+    // -----------------------------
+    let chaosH = (errH * 0.7) + (pressH * 0.4) + (momH * 0.3);
+    let chaosA = (errA * 0.7) + (pressA * 0.4) + (momA * 0.3);
+
+    tempoH = clamp(tempoH, 1, 10);
+    tempoA = clamp(tempoA, 1, 10);
+    chaosH = clamp(chaosH, 1, 10);
+    chaosA = clamp(chaosA, 1, 10);
+    importance = clamp(importance, 1, 5);
+
+    // global
+    let tempo = (tempoH + tempoA) / 2;
+    let chaos = (chaosH + chaosA) / 2;
+    tempo = clamp(tempo, 1, 10);
+    chaos = clamp(chaos, 1, 10);
+
+    // SIMPAN KE STATE DENGAN STRUKTUR LENGKAP
+    PSZ.state.tci_profile = {
+        tempoH,
+        tempoA,
+        chaosH,
+        chaosA,
+        tempo: { global: tempo },
+        chaos: { global: chaos },
+        importance
+    };
+
+    PSZ.log(`TCI v9 → TempoH: ${tempoH.toFixed(2)} | TempoA: ${tempoA.toFixed(2)}`);
+    PSZ.log(`TCI v9 → ChaosH: ${chaosH.toFixed(2)} | ChaosA: ${chaosA.toFixed(2)}`);
+    PSZ.log(`TCI v9 → TempoG: ${tempo.toFixed(2)} | ChaosG: ${chaos.toFixed(2)}`);
+    PSZ.log(`TCI v9 → Importance: ${importance.toFixed(2)}`);
+    PSZ.log("=== AUTO TCI v9 END ===\n");
+
+    return PSZ.state.tci_profile;
+};
+
+// ======================================================
+// PART 4 — Dynamic xG (d-xG) v1 (FIX pakai TCI baru)
+// ======================================================
+PSZ.dynamicXG = function () {
+    const teams = PSZ.getTeams();
+    const { hxg, axg, hxga, axga } = PSZ.getBaseXG();
+    const TCI = PSZ.state.tci_profile || {};
+
+    // FIX: gunakan per-tim kalau ada, fallback ke global, lalu 5
+    const tempo = (
+        (TCI.tempoH ?? TCI.tempo?.global ?? 5) +
+        (TCI.tempoA ?? TCI.tempo?.global ?? 5)
+    ) / 2;
+
+    const chaos = (
+        (TCI.chaosH ?? TCI.chaos?.global ?? 5) +
+        (TCI.chaosA ?? TCI.chaos?.global ?? 5)
+    ) / 2;
+
+    const imp = TCI.importance ?? 3;
+
+    // Normalisasi
+    const normTempo = tempo / 10;
+    const normChaos = chaos / 10;
+
+    // Adjust xG sesuai tempo & chaos
+    const homeBoost = 1 + (normTempo * 0.25) + (normChaos * 0.15);
+    const awayBoost = 1 + (normTempo * 0.20) + (normChaos * 0.20);
+
+    const hxg_dyn = hxg * homeBoost;
+    const axg_dyn = axg * awayBoost;
+
+    // O/U baseline dari total xG
+    const total_xg = hxg_dyn + axg_dyn;
+    let line = 2.5;
+    if (total_xg > 3.2) line = 3.0;
+    if (total_xg < 2.1) line = 2.0;
+
+    const txt = [];
+    txt.push("=== Dynamic xG v1 (TCI Fusion) ===");
+    txt.push(`Match: ${teams.home} vs ${teams.away}`);
+    txt.push(`Base xG Home: ${hxg.toFixed(2)} → Dynamic: ${hxg_dyn.toFixed(2)}`);
+    txt.push(`Base xG Away: ${axg.toFixed(2)} → Dynamic: ${axg_dyn.toFixed(2)}`);
+    txt.push(`Tempo Avg: ${tempo.toFixed(2)} | Chaos Avg: ${chaos.toFixed(2)} | Importance: ${imp.toFixed(2)}`);
+    txt.push(`Total Dynamic xG: ${total_xg.toFixed(2)} → Suggested OU line ~ ${line.toFixed(1)}`);
+    txt.push("");
+
+    PSZ.log(txt.join("\n"));
+
+    // simpan ke state buat dipakai engine lain (OU Heat, ScoreGrid, dll)
+    PSZ.state.dxg = { hxg_dyn, axg_dyn, total_xg, line };
+    return PSZ.state.dxg;
+};
+// ======================================================
+// PART 5 — PRIME ENGINE v4 (baseline 1X2 + OU)
+// ======================================================
+PSZ.runPrime = function () {
+    const teams = PSZ.getTeams();
+    const { hxg, axg, hxga, axga } = PSZ.getBaseXG();
+    const TCI = PSZ.state.tci_profile || {};
+
+    const tempo = TCI.tempo?.global ?? 5;
+    const chaos = TCI.chaos?.global ?? 5;
+
+    // Home advantage sederhana
+    const homeAdv = 0.35;
+
+    // attack strength & defence weakness
+    const homeAttack = hxg - axga + homeAdv;
+    const awayAttack = axg - hxga;
+
+    const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+
+    // skala ke "rating"
+    const homeRating = clamp(homeAttack + tempo * 0.05 - chaos * 0.03, -2, 2);
+    const awayRating = clamp(awayAttack + tempo * 0.03 - chaos * 0.02, -2, 2);
+
+    // convert ke probabilitas kasar pake logistic
+    const toProb = (r) => 1 / (1 + Math.exp(-r));
+
+    const pHomeBase = toProb(homeRating);
+    const pAwayBase = toProb(awayRating);
+
+    let pHome = pHomeBase * 0.6;
+    let pAway = pAwayBase * 0.6;
+    let pDraw = 1 - (pHome + pAway);
+
+    if (pDraw < 0.15) {
+        const diff = 0.15 - pDraw;
+        pHome -= diff / 2;
+        pAway -= diff / 2;
+        pDraw = 0.15;
+    }
+
+    const sum = pHome + pDraw + pAway;
+    pHome /= sum;
+    pDraw /= sum;
+    pAway /= sum;
+
+    const total_xg = (hxg + axg);
+    let line = 2.5;
+    if (total_xg > 3.2) line = 3.0;
+    if (total_xg < 2.1) line = 2.0;
+
+    const txt = [];
+    txt.push("=== PRIME ENGINE v4 ===");
+    txt.push(`Match : ${teams.home} vs ${teams.away}`);
+    txt.push(`Tempo : ${tempo.toFixed(2)} | Chaos: ${chaos.toFixed(2)}`);
+    txt.push(`Base xG H/A: ${hxg.toFixed(2)} / ${axg.toFixed(2)}`);
+    txt.push("");
+    txt.push(`Prob HOME : ${(pHome * 100).toFixed(1)} %`);
+    txt.push(`Prob DRAW : ${(pDraw * 100).toFixed(1)} %`);
+    txt.push(`Prob AWAY : ${(pAway * 100).toFixed(1)} %`);
+    txt.push("");
+    txt.push(`OU baseline (xG): line ~ ${line.toFixed(1)} goals`);
+    txt.push("Rekom: fokus ke jalur dengan value vs odds market.\n");
+
+    PSZ.log(txt.join("\n"));
+
+    PSZ.state.prime = { pHome, pDraw, pAway, line };
+    return PSZ.state.prime;
+};
+
+// ======================================================
+// PART 6 — HYBRID ENGINE v3 (Prime + Dynamic xG)
+// ======================================================
+PSZ.runHybrid = function () {
+    const dxg = PSZ.state.dxg || PSZ.dynamicXG();
+    const prime = PSZ.state.prime || PSZ.runPrime();
+
+    const total_xg = dxg.total_xg;
+    let line = dxg.line;
+
+    // Adjust line sedikit dengan 1X2 shape
+    if (prime.pHome > 0.55 && total_xg > 2.4) {
+        line += 0.25;
+    }
+    if (prime.pAway > 0.55 && total_xg > 2.6) {
+        line += 0.25;
+    }
+
+    const txt = [];
+    txt.push("=== HYBRID ENGINE v3 ===");
+    txt.push(`Total Dynamic xG: ${total_xg.toFixed(2)}`);
+    txt.push(`Prime 1X2 → H: ${(prime.pHome * 100).toFixed(1)}% | D: ${(prime.pDraw * 100).toFixed(1)}% | A: ${(prime.pAway * 100).toFixed(1)}%`);
+    txt.push(`Hybrid OU line suggestion: ~ ${line.toFixed(2)}`);
+    txt.push("Gunakan untuk kombinasi 1X2 + OU / mix parlay.\n");
+
+    PSZ.log(txt.join("\n"));
+
+    PSZ.state.hybrid = { hybrid_line: line };
+    return PSZ.state.hybrid;
+};
+
+// ======================================================
+// PART 7 — INFINITY ENGINE (Grand Unified)
+// ======================================================
+PSZ.runInfinity = function () {
+    const dxg = PSZ.state.dxg || PSZ.dynamicXG();
+    const prime = PSZ.state.prime || PSZ.runPrime();
+    const hybrid = PSZ.state.hybrid || PSZ.runHybrid();
+    const TCI = PSZ.state.tci_profile || {};
+
+    const tempo = TCI.tempo?.global ?? 5;
+    const chaos = TCI.chaos?.global ?? 5;
+
+    const riskIndex = (tempo + chaos) / 2;
+    const safeMode = riskIndex < 5;
+
+    const txt = [];
+    txt.push("=== INFINITY ENGINE v3 (Grand Unified) ===");
+    txt.push(`Tempo: ${tempo.toFixed(2)} | Chaos: ${chaos.toFixed(2)} | RiskIndex: ${riskIndex.toFixed(2)}`);
+    txt.push(`Prime 1X2 → H/D/A = ${(prime.pHome*100).toFixed(1)} / ${(prime.pDraw*100).toFixed(1)} / ${(prime.pAway*100).toFixed(1)} %`);
+    txt.push(`Dynamic total xG: ${dxg.total_xg.toFixed(2)} | Hybrid OU: ${hybrid.hybrid_line.toFixed(2)}`);
+    txt.push("");
+
+    if (safeMode) {
+        txt.push("Mode: SAFE / CONTROL → fokus: double chance, under kontrol, handicap ringan.");
+    } else {
+        txt.push("Mode: AGGRESSIVE / CHAOTIC → fokus: over, BTTS, scoreline high, parlay agresif.");
+    }
+
+    txt.push("Gunakan Infinity sebagai panduan gaya main (bukan hanya 1 bet).\n");
+
+    PSZ.log(txt.join("\n"));
+
+    PSZ.state.infinity = { riskIndex, safeMode };
+    return PSZ.state.infinity;
+};
+
+// ======================================================
+// PART 8 — OU HEAT ENGINE (jalan OU / BTTS)
+// ======================================================
+PSZ.runOUHeat = function () {
+    const dxg = PSZ.state.dxg || PSZ.dynamicXG();
+    const TCI = PSZ.state.tci_profile || {};
+
+    const tempo = (TCI.tempo?.global ?? 5);
+    const chaos = (TCI.chaos?.global ?? 5);
+
+    const heatIndex = (dxg.total_xg * 0.6) + (tempo * 0.2) + (chaos * 0.2);
+
+    let tag = "NETRAL";
+    if (heatIndex >= 18) tag = "HIGH OVER ZONE";
+    else if (heatIndex <= 11) tag = "LOW / UNDER ZONE";
+
+    const txt = [];
+    txt.push("=== OU HEAT ENGINE ===");
+    txt.push(`Total Dynamic xG: ${dxg.total_xg.toFixed(2)}`);
+    txt.push(`Tempo: ${tempo.toFixed(2)} | Chaos: ${chaos.toFixed(2)}`);
+    txt.push(`Heat Index: ${heatIndex.toFixed(2)} → ${tag}`);
+    txt.push("Interpretasi:");
+    txt.push("- HIGH OVER ZONE  → cenderung Over, BTTS YES lebih hidup");
+    txt.push("- LOW / UNDER ZONE→ cenderung Under, BTTS NO lebih aman");
+    txt.push("- NETRAL          → lihat Prime/Hybrid/Infinity & odds market.\n");
+
+    PSZ.log(txt.join("\n"));
+
+    PSZ.state.ou_heat = { heatIndex, tag };
+    return PSZ.state.ou_heat;
+};
+
+// ======================================================
+// PART 9 — CORRECT SCORE GRID v2 (pakai TCI baru)
+// ======================================================
+PSZ.runScoreGrid = function () {
+    const teams = PSZ.getTeams();
+    const dxg = PSZ.state.dxg || PSZ.dynamicXG();
+    const TCI = PSZ.state.tci_profile || {};
+
+    const tempo = (
+        (TCI.tempoH ?? TCI.tempo?.global ?? 5) +
+        (TCI.tempoA ?? TCI.tempo?.global ?? 5)
+    ) / 2;
+    const chaos = (
+        (TCI.chaosH ?? TCI.chaos?.global ?? 5) +
+        (TCI.chaosA ?? TCI.chaos?.global ?? 5)
+    ) / 2;
+
+    const hxg = dxg.hxg_dyn ?? dxg.hxg ?? PSZ.num("home_xg");
+    const axg = dxg.axg_dyn ?? dxg.axg ?? PSZ.num("away_xg");
+
+    const maxGoals = 4;
+    const grid = [];
+    let totalWeight = 0;
+
+    for (let gh = 0; gh <= maxGoals; gh++) {
+        for (let ga = 0; ga <= maxGoals; ga++) {
+            // weight sederhana: dekat ke xG → lebih besar
+            const diffH = Math.abs(gh - hxg);
+            const diffA = Math.abs(ga - axg);
+
+            let w = Math.exp(-diffH) * Math.exp(-diffA);
+
+            // chaos → lebih banyak gol tinggi
+            const highScore = (gh + ga) >= 4;
+            if (highScore) {
+                w *= (1 + chaos / 10);
+            }
+
+            // tempo tinggi → skor non 0-0 lebih diuntungkan
+            if (!(gh === 0 && ga === 0)) {
+                w *= (1 + tempo / 15);
+            }
+
+            grid.push({ gh, ga, w });
+            totalWeight += w;
+        }
+    }
+
+    grid.forEach(c => c.p = c.w / totalWeight);
+
+    // Ambil 6 scoreline tertinggi
+    grid.sort((a, b) => b.p - a.p);
+    const top = grid.slice(0, 6);
+
+    const txt = [];
+    txt.push("=== CORRECT SCORE GRID v2 ===");
+    txt.push(`Match: ${teams.home} vs ${teams.away}`);
+    txt.push(`Dynamic xG H/A: ${hxg.toFixed(2)} / ${axg.toFixed(2)}`);
+    txt.push(`Tempo Avg: ${tempo.toFixed(2)} | Chaos Avg: ${chaos.toFixed(2)}`);
+    txt.push("");
+    txt.push("Top 6 Scorelines (model internal, bukan odds):");
+
+    top.forEach(c => {
+        const label = `${c.gh}-${c.ga}`;
+        const prob = (c.p * 100).toFixed(2);
+        txt.push(`- ${label}  → ~ ${prob}%`);
+    });
+
+    txt.push("\nGunakan hanya sebagai panduan jalur score (support BTTS / OU / handicap).");
+
+    PSZ.log(txt.join("\n"));
+
+    PSZ.state.scoregrid = { top };
+    return PSZ.state.scoregrid;
+};
+
+// ======================================================
+// PART 10 — BANKROLL MANAGEMENT (BRM) sederhana
+// ======================================================
+PSZ.runBRM = function () {
+    const prime = PSZ.state.prime || PSZ.runPrime();
+    const teams = PSZ.getTeams();
+
+    // contoh: user misal punya edge subjektif di Home (bisa diganti manual)
+    const modelProbHome = prime.pHome; // dari model
+    const marketProbHome = 0.45;       // contoh asumsi market (bisa diinput manual kalau mau)
+    const edge = modelProbHome - marketProbHome;
+
+    const txt = [];
+    txt.push("=== BRM (Bankroll Management) Sederhana ===");
+    txt.push(`Contoh jalur: HOME (${teams.home})`);
+    txt.push(`Prob model: ${(modelProbHome*100).toFixed(1)}% vs market (asumsi): ${(marketProbHome*100).toFixed(1)}%`);
+    txt.push(`Edge model: ${(edge*100).toFixed(2)}%`);
+
+    if (edge <= 0) {
+        txt.push("→ Tidak ada edge positif yang jelas, stakes sebaiknya kecil atau skip.");
+    } else {
+        // Kelly fraction (sederhana) dengan odds implisit 1 / marketProb
+        const odds = 1 / marketProbHome;
+        const q = 1 - modelProbHome;
+        const kelly = (modelProbHome * (odds - 1) - q) / (odds - 1);
+
+        const safeKelly = Math.max(0, kelly) * 0.5; // half-kelly
+        txt.push(`Estimasi fraksi Kelly (full): ${(kelly*100).toFixed(2)}% dari bankroll`);
+        txt.push(`Saran (half-Kelly): ${(safeKelly*100).toFixed(2)}% dari bankroll`);
+        txt.push("Sesuaikan dengan toleransi risk pribadi (ini hanya panduan matematis).");
+    }
+
+    txt.push("");
+
+    PSZ.log(txt.join("\n"));
+
+    PSZ.state.brm = { edge };
+    return PSZ.state.brm;
+};
+// ======================================================
+// PART 11 — BINDING TOMBOL + STARTUP
+// ======================================================
+PSZ.bindButtons = function () {
+    const b = (id, fn) => {
+        const el = PSZ.el(id);
+        if (el) el.onclick = fn;
+    };
+
+    b("btn_auto", () => {
+        PSZ.log("Menjalankan AUTO CALC (TCI v9)...");
+        PSZ.autoTCI();
+        PSZ.dynamicXG();
+    });
+
+    b("btn_analyze", () => {
+        PSZ.log("Menjalankan PRIME ENGINE...");
+        PSZ.runPrime();
+    });
+
+    b("btn_hybrid", () => {
+        PSZ.log("Menjalankan HYBRID ENGINE...");
+        PSZ.runHybrid();
+    });
+
+    b("btn_grand_unified", () => {
+        PSZ.log("Menjalankan INFINITY ENGINE...");
+        PSZ.runInfinity();
+    });
+
+    b("btn_dxg", () => {
+        PSZ.log("Menjalankan Dynamic xG...");
+        PSZ.dynamicXG();
+    });
+
+    b("btn_ou_heat", () => {
+        PSZ.log("Menjalankan OU HEAT...");
+        PSZ.runOUHeat();
+    });
+
+    b("btn_scoregrid", () => {
+        PSZ.log("Menjalankan CORRECT SCORE GRID...");
+        PSZ.runScoreGrid();
+    });
+
+    b("btn_brm", () => {
+        PSZ.log("Menjalankan BRM...");
+        PSZ.runBRM();
+    });
+};
+
+document.addEventListener("DOMContentLoaded", function () {
+    PSZ.bindButtons();
+    PSZ.log("Prediksi Bola Engine loaded. Isi data lalu klik Auto Calc / PRIME / lainnya.");
+});
+</script>
+
+</div> <!-- end .container -->
+</body>
+</html>

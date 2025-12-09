@@ -1,0 +1,2672 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>v400 Football Prediction Engine (Final)</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    :root {
+      --bg: #020617;
+      --bg2:#02091f;
+      --panel:#020918;
+      --border:#1f2937;
+      --accent:#38bdf8;
+      --accent2:#fb7185;
+      --text:#e5e7eb;
+      --sub:#9ca3af;
+      --danger:#f97373;
+      --radius:14px;
+    }
+    *{box-sizing:border-box;}
+    body{
+      margin:0;
+      padding:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+      background:radial-gradient(circle at top,#0b1120 0,#020617 55%);
+      color:var(--text);
+    }
+    .container{
+      max-width:1200px;
+      margin:18px auto 32px;
+      padding:0 12px 24px;
+    }
+    h1{
+      font-size:24px;
+      margin:0 0 4px 0;
+    }
+    .subtitle{
+      font-size:12px;
+      color:var(--sub);
+      margin-bottom:14px;
+    }
+    .grid{
+      display:flex;
+      flex-wrap:wrap;
+      gap:12px;
+    }
+    .col{
+      flex:1 1 260px;
+      min-width:260px;
+    }
+    .box{
+      background:linear-gradient(135deg,#020618,#020416);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      padding:10px 12px 12px;
+      box-shadow:0 18px 40px rgba(15,23,42,.5);
+    }
+    .box-header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      margin-bottom:8px;
+    }
+    .box-header h2{
+      font-size:14px;
+      margin:0;
+      font-weight:600;
+    }
+    .tag{
+      font-size:11px;
+      padding:2px 7px;
+      border-radius:999px;
+      border:1px solid rgba(148,163,184,.6);
+      color:var(--sub);
+    }
+    label{
+      display:block;
+      font-size:11px;
+      color:var(--sub);
+      margin-top:6px;
+      margin-bottom:2px;
+    }
+    input,select,textarea{
+      width:100%;
+      font-size:12px;
+      border-radius:8px;
+      border:1px solid #111827;
+      background:#020617;
+      color:var(--text);
+      padding:6px 7px;
+      outline:none;
+      transition:border-color .15s,background-color .15s;
+    }
+    input:focus,select:focus,textarea:focus{
+      border-color:var(--accent);
+      background:#02081f;
+    }
+    textarea{
+      resize:vertical;
+      min-height:60px;
+    }
+    .row-inline{
+      display:flex;
+      gap:6px;
+    }
+    .row-inline > div{
+      flex:1;
+    }
+    .btn-row{
+      margin-top:14px;
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    .btn-main,.btn-clear{
+      border-radius:999px;
+      border:1px solid transparent;
+      font-size:12px;
+      padding:7px 14px;
+      cursor:pointer;
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      background:#02081f;
+      color:var(--text);
+      transition:background-color .15s,border-color .15s,transform .1s;
+    }
+    .btn-main{
+      border-color:var(--accent);
+    }
+    .btn-main:hover{
+      background:rgba(56,189,248,.16);
+      transform:translateY(-1px);
+    }
+    .btn-clear{
+      border-color:#4b5563;
+    }
+    .btn-clear:hover{
+      background:#020617;
+      transform:translateY(-1px);
+    }
+    #result_panel{
+      white-space:pre-wrap;
+      font-family:Consolas,Menlo,monospace;
+      font-size:12px;
+      background:#020617;
+      border-radius:var(--radius);
+      border:1px solid var(--border);
+      padding:10px;
+      min-height:220px;
+      max-height:520px;
+      overflow-y:auto;
+      margin-top:8px;
+    }
+    .pill-row{
+      font-size:11px;
+      color:var(--sub);
+      margin-top:4px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:4px;
+    }
+    .pill{
+      padding:2px 7px;
+      border-radius:999px;
+      border:1px solid #1f2937;
+      background:#020617;
+    }
+    @media(max-width:640px){
+      .container{padding:0 8px 18px;}
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <!-- HEADER -->
+  <div class="box" style="margin-bottom:10px;">
+    <div class="box-header">
+      <h1>v400 Football Prediction Engine</h1>
+      <span class="tag">FINAL • Auto-Driven • Neutral</span>
+    </div>
+    <div class="subtitle">
+      Versi v400: UI minimal · perhitungan full-auto · tidak memakai odds · tidak condong ke Home/Away atau Over/Under.
+    </div>
+
+    <div class="grid">
+      <div class="col">
+        <label>Nama Pertandingan</label>
+        <input id="m_title" placeholder="contoh: Arsenal vs Brentford">
+
+        <div class="row-inline">
+          <div>
+            <label>Tanggal Kickoff</label>
+            <input id="m_date" placeholder="YYYY-MM-DD">
+          </div>
+          <div>
+            <label>Jam (opsional)</label>
+            <input id="m_time" placeholder="HH:MM">
+          </div>
+        </div>
+
+        <label>Kompetisi / Liga</label>
+        <input id="m_league" placeholder="contoh: Premier League, UCL, Liga 1 Indonesia">
+      </div>
+
+      <div class="col">
+        <label>Tipe Laga</label>
+        <select id="m_mode">
+          <option value="">(pilih)</option>
+          <option value="league">League</option>
+          <option value="cup">Cup / Knockout</option>
+          <option value="ucl">UCL / UEL</option>
+          <option value="derby">Derby / Rivalitas</option>
+          <option value="final">Final</option>
+          <option value="title">Title Race</option>
+          <option value="relegation">Relegation Battle</option>
+          <option value="intl">International Match</option>
+          <option value="friendly">Friendly</option>
+        </select>
+
+        <div class="row-inline">
+          <div>
+            <label>Cuaca (perkiraan)</label>
+            <select id="m_weather">
+              <option value="">(unknown)</option>
+              <option value="clear">Clear</option>
+              <option value="rain">Rain</option>
+              <option value="heavy_rain">Heavy Rain</option>
+              <option value="snow">Snow</option>
+              <option value="windy">Windy</option>
+            </select>
+          </div>
+          <div>
+            <label>Kondisi Lapangan</label>
+            <select id="m_pitch">
+              <option value="">(normal)</option>
+              <option value="good">Good</option>
+              <option value="medium">Medium</option>
+              <option value="bad">Bad</option>
+              <option value="wet">Wet / Slippery</option>
+            </select>
+          </div>
+        </div>
+
+        <label>Catatan Penting (opsional)</label>
+        <textarea id="m_note" placeholder="contoh: second leg, agregat 2-1, beberapa pemain inti baru pulih, dll."></textarea>
+      </div>
+    </div>
+
+    <div class="pill-row">
+      <span class="pill">Input dibuat minimal</span>
+      <span class="pill">Statistik lanjutan otomatis dari engine</span>
+      <span class="pill">Context (importance, chaos, fatigue) auto</span>
+    </div>
+  </div>
+
+  <!-- TEAMS BASIC PANEL -->
+  <div class="grid">
+    <!-- HOME -->
+    <div class="col">
+      <div class="box">
+        <div class="box-header">
+          <h2>Home Team (Basic)</h2>
+          <span class="tag">Minimal Input</span>
+        </div>
+
+        <label>Nama Home</label>
+        <input id="h_name" placeholder="contoh: Arsenal">
+
+        <div class="row-inline">
+          <div>
+            <label>GPG (Goals per game)</label>
+            <input id="h_gpg" type="number" step="0.01" placeholder="contoh: 2.1">
+          </div>
+          <div>
+            <label>GC per game</label>
+            <input id="h_gc" type="number" step="0.01" placeholder="contoh: 0.9">
+          </div>
+        </div>
+
+        <div class="row-inline">
+          <div>
+            <label>Shots per game</label>
+            <input id="h_shots" type="number" step="0.1" placeholder="contoh: 15.3">
+          </div>
+          <div>
+            <label>Shots conceded per game</label>
+            <input id="h_shc" type="number" step="0.1" placeholder="contoh: 9.8">
+          </div>
+        </div>
+
+        <label>Form 5 laga (W/D/L)</label>
+        <input id="h_form_raw" placeholder="contoh: WWDWL">
+
+        <div class="row-inline">
+          <div>
+            <label>Quality garis besar (1–10, opsional)</label>
+            <input id="h_quality" type="number" step="0.1" placeholder="kosongkan → auto">
+          </div>
+          <div>
+            <label>Stability (1–10, opsional)</label>
+            <input id="h_stab" type="number" step="0.1" placeholder="kosongkan → auto">
+          </div>
+        </div>
+
+        <label>Pemain absen penting (opsional, teks)</label>
+        <textarea id="h_abs" placeholder="contoh: GK utama, CB1, winger kiri. Biarkan kosong jika normal."></textarea>
+      </div>
+    </div>
+
+    <!-- AWAY -->
+    <div class="col">
+      <div class="box">
+        <div class="box-header">
+          <h2>Away Team (Basic)</h2>
+          <span class="tag">Minimal Input</span>
+        </div>
+
+        <label>Nama Away</label>
+        <input id="a_name" placeholder="contoh: Brentford">
+
+        <div class="row-inline">
+          <div>
+            <label>GPG (Goals per game)</label>
+            <input id="a_gpg" type="number" step="0.01" placeholder="contoh: 1.3">
+          </div>
+          <div>
+            <label>GC per game</label>
+            <input id="a_gc" type="number" step="0.01" placeholder="contoh: 1.5">
+          </div>
+        </div>
+
+        <div class="row-inline">
+          <div>
+            <label>Shots per game</label>
+            <input id="a_shots" type="number" step="0.1" placeholder="contoh: 12.0">
+          </div>
+          <div>
+            <label>Shots conceded per game</label>
+            <input id="a_shc" type="number" step="0.1" placeholder="contoh: 14.5">
+          </div>
+        </div>
+
+        <label>Form 5 laga (W/D/L)</label>
+        <input id="a_form_raw" placeholder="contoh: DLWDL">
+
+        <div class="row-inline">
+          <div>
+            <label>Quality garis besar (1–10, opsional)</label>
+            <input id="a_quality" type="number" step="0.1" placeholder="kosongkan → auto">
+          </div>
+          <div>
+            <label>Stability (1–10, opsional)</label>
+            <input id="a_stab" type="number" step="0.1" placeholder="kosongkan → auto">
+          </div>
+        </div>
+
+        <label>Pemain absen penting (opsional, teks)</label>
+        <textarea id="a_abs" placeholder="contoh: striker utama cedera, gelandang bertahan akumulasi kartu."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- H2H & KONTEKS TAMBAHAN -->
+  <div class="box" style="margin-top:10px;">
+    <div class="box-header">
+      <h2>H2H & Context Tambahan</h2>
+      <span class="tag">Optional, membantu auto-engine</span>
+    </div>
+
+    <label>H2H skor (format: 2-1,1-1,0-3, ... )</label>
+    <textarea id="m_h2h" placeholder="contoh: 2-1,1-1,0-3 (biarkan kosong jika jarang bertemu)"></textarea>
+
+    <div class="row-inline">
+      <div>
+        <label>Referee name (opsional)</label>
+        <input id="m_ref" placeholder="boleh kosong jika tidak tahu">
+      </div>
+      <div>
+        <label>Extra note (opsional)</label>
+        <input id="m_extra" placeholder="contoh: rotasi besar di away team, match 3 hari sekali, dll.">
+      </div>
+    </div>
+
+    <div class="pill-row">
+      <span class="pill">Jika kolom dibiarkan kosong → di-auto oleh engine v400</span>
+      <span class="pill">H2H & catatan penting akan dipakai untuk mengatur chaos / risk</span>
+    </div>
+  </div>
+
+  <!-- OUTPUT & TOMBOL -->
+  <div class="box" style="margin-top:10px;">
+    <div class="box-header">
+      <h2>Output Analisis v400</h2>
+      <span class="tag">Text + Visual (nanti di Part 2+)</span>
+    </div>
+
+    <div class="btn-row">
+      <button id="btn_analyze_v400" class="btn-main">
+        ANALYZE v400 (Final Engine)
+      </button>
+      <button id="btn_clear_v400" class="btn-clear">
+        CLEAR
+      </button>
+    </div>
+
+    <div id="result_panel">
+Engine v400 siap.  
+Isi data minimal di atas, lalu tekan "ANALYZE v400" setelah script engine (Part 2+) ditambahkan.
+    </div>
+  </div>
+
+</div><!-- /container -->
+<!-- ===========================================================
+     v400 PART 2 — CORE HELPER ENGINE
+     • Namespace: window.V400
+     • Fungsi dasar: num, clamp, lerp, Poisson, random, dll.
+=========================================================== -->
+<script>
+(function(global){
+  "use strict";
+
+  const V400 = global.V400 = global.V400 || {};
+
+  /* ---------------------------------------------------------
+     1. BASIC SAFE NUMBER UTILITIES
+  --------------------------------------------------------- */
+  function num(v){
+    if(v===null || v===undefined) return 0;
+    if(typeof v === "number" && !isNaN(v)) return v;
+    const n = parseFloat(v);
+    if(isNaN(n) || !isFinite(n)) return 0;
+    return n;
+  }
+
+  function clamp(v,min,max){
+    v = num(v);
+    if(v < min) return min;
+    if(v > max) return max;
+    return v;
+  }
+
+  function lerp(a,b,t){
+    t = clamp(t,0,1);
+    return a + (b-a)*t;
+  }
+
+  function randRange(min,max){
+    min = num(min);
+    max = num(max);
+    if(max < min){ var t=min;min=max;max=t; }
+    return min + Math.random()*(max-min);
+  }
+
+  function safeStr(v){
+    if(v===null || v===undefined) return "";
+    return String(v);
+  }
+
+  V400.num       = num;
+  V400.clamp     = clamp;
+  V400.lerp      = lerp;
+  V400.randRange = randRange;
+  V400.safeStr   = safeStr;
+
+  /* ---------------------------------------------------------
+     2. FACTORIAL + POISSON (DENGAN CACHE)
+     Dipakai untuk distribusi gol & simulasi.
+  --------------------------------------------------------- */
+  const factCache = {0:1,1:1};
+
+  function factorial(n){
+    n = Math.floor(num(n));
+    if(n < 0) return 1;
+    if(factCache[n] !== undefined) return factCache[n];
+    let res = factCache[1];
+    for(let i=2;i<=n;i++){
+      if(factCache[i] !== undefined){
+        res = factCache[i];
+      } else {
+        res *= i;
+        factCache[i] = res;
+      }
+    }
+    return factCache[n];
+  }
+
+  function poisson(lambda,k){
+    lambda = Math.max(0,num(lambda));
+    k      = Math.max(0,Math.floor(num(k)));
+    if(lambda === 0){
+      return (k===0)?1:0;
+    }
+    const top = Math.pow(lambda,k)*Math.exp(-lambda);
+    const bot = factorial(k);
+    const p = top / (bot || 1);
+    if(!isFinite(p) || isNaN(p)) return 0;
+    return p;
+  }
+
+  V400.factorial = factorial;
+  V400.poisson   = poisson;
+
+  /* ---------------------------------------------------------
+     3. SMALL HELPERS UNTUK NANTINYA (NORMALISASI)
+  --------------------------------------------------------- */
+  // Normalisasi rating 1–10 → 0–1
+  function norm10(v){
+    return clamp(v,1,10)/10;
+  }
+  // Normalisasi persentase 0–100 → 0–1
+  function normPct(v){
+    return clamp(v,0,100)/100;
+  }
+
+  V400.norm10  = norm10;
+  V400.normPct = normPct;
+
+  /* ---------------------------------------------------------
+     4. SIMPLE SAFE MERGE (untuk objek input/ctx)
+  --------------------------------------------------------- */
+  function mergeSafe(base,extra){
+    const out = Object.assign({}, base||{});
+    if(extra && typeof extra==="object"){
+      Object.keys(extra).forEach(k=>{
+        out[k] = extra[k];
+      });
+    }
+    return out;
+  }
+  V400.mergeSafe = mergeSafe;
+
+})(window);
+</script>
+<!-- ===========================================================
+     v400 PART 3 — AUTO ENGINE v300+
+     Mengubah input minimal → statistik lengkap untuk Omega/Tactical.
+     Menggunakan helper v400 PART 2.
+=========================================================== -->
+<script>
+(function(global){
+  "use strict";
+
+  const V400 = global.V400 = global.V400 || {};
+  const num    = V400.num;
+  const clamp  = V400.clamp;
+  const norm10 = V400.norm10;
+  const normPct= V400.normPct;
+
+  /* ===========================================================
+       0. Utility konversi form W/D/L → skor 1–10
+  ============================================================ */
+  function calcFormScore(formRaw){
+    if(!formRaw) return 5;
+    const txt = String(formRaw).toUpperCase().replace(/[^WDL]/g,"");
+    if(!txt.length) return 5;
+
+    let score = 0;
+    for(const c of txt){
+      if(c==="W") score += 3;
+      else if(c==="D") score += 1;
+      else score += 0;
+    }
+    const max = txt.length * 3;
+    return clamp((score/max)*10, 1, 10);
+  }
+
+  /* ===========================================================
+       1. Auto Quality (berdasarkan GPG/GC/shots/shc)
+  ============================================================ */
+  function autoQuality(t){
+    const atk = clamp( ( t.gpg*1.4 ) + (t.shots*0.08), 0, 10 );
+    const def = clamp( ( (3 - t.gc)*1.5 ) + ( (20 - t.shc)*0.07 ), 0, 10 );
+    const q   = (atk*0.55 + def*0.45);
+    return clamp(q, 1, 10);
+  }
+
+  /* ===========================================================
+       2. Auto Stability
+  ============================================================ */
+  function autoStability(t){
+    const base = 6;
+    const mod1 = (t.shc <= t.shots ? 1 : -1) * clamp((t.shots - t.shc)*0.03, -2, 2);
+    const mod2 = (t.gc <= 1.2 ? 1 : -1) * clamp((1.2 - t.gc)*0.8, -2, 2);
+    return clamp(base + mod1 + mod2, 1, 10);
+  }
+
+  /* ===========================================================
+       3. Auto Goalkeeper rating (kasar)
+  ============================================================ */
+  function autoGK(t){
+    const base = 6;
+    const mod  = clamp((2.2 - t.gc)*2.2, -2, 3);
+    return clamp(base + mod, 1, 10);
+  }
+
+  /* ===========================================================
+       4. Auto Conversion Rate (Conv%)
+  ============================================================ */
+  function autoConv(t){
+    const raw = (t.gpg / Math.max(t.shots,1)) * 100;
+    return clamp(raw, 1, 40);
+  }
+
+  /* ===========================================================
+       5. Auto SOT% (shot on target%)
+  ============================================================ */
+  function autoSOT(t){
+    const estimated = clamp( (t.gpg*2.1 + t.shots*0.9), 0, t.shots*2 );
+    const pct = (estimated / Math.max(t.shots,1)) * 60;
+    return clamp(pct, 10, 70);
+  }
+
+  /* ===========================================================
+       6. Auto Cross Efficiency
+  ============================================================ */
+  function autoCrossEff(t){
+    const raw = clamp( (t.shots*0.4 + t.gpg*1.6), 0, 100 );
+    return clamp(raw, 5, 50);
+  }
+
+  /* ===========================================================
+       7. Auto Build-up rating
+  ============================================================ */
+  function autoBuild(t){
+    const base = (t.shots >= 14 ? 7 : 5);
+    const mod  = clamp((t.gpg - 1.4)*1.8, -2, 2);
+    return clamp(base + mod, 1, 10);
+  }
+
+  /* ===========================================================
+       8. Auto Press Resistance
+  ============================================================ */
+  function autoPressRes(t){
+    const base = 5 + (t.shots >= 13 ? 1 : 0);
+    const mod  = clamp((1.5 - t.gc)*1.4, -1.5, 2.5);
+    return clamp(base + mod, 1, 10);
+  }
+
+  /* ===========================================================
+       9. Auto xThreat (approx)
+  ============================================================ */
+  function autoXThreat(t){
+    const xt = (t.shots*0.15 + t.gpg*1.4);
+    return clamp(xt, 1, 10);
+  }
+
+  /* ===========================================================
+       10. Auto DM15 (defensive metric)
+  ============================================================ */
+  function autoDM15(t){
+    const raw = 6 + clamp((1.2 - t.gc)*2.2, -3, 3);
+    return clamp(raw, 1, 10);
+  }
+
+  /* ===========================================================
+       11. Auto Transisi
+  ============================================================ */
+  function autoTransition(t){
+    const mod = clamp((t.shots - t.shc)*0.06, -2, 2);
+    return clamp(6 + mod, 1, 10);
+  }
+
+  /* ===========================================================
+       12. Auto Wave (momentum patterns)
+  ============================================================ */
+  function autoWave(t){
+    const raw = 5 + clamp((t.shots - 12)*0.1, -3, 3);
+    return clamp(raw, 1, 10);
+  }
+
+  /* ===========================================================
+       13. Auto Possession Tendency
+  ============================================================ */
+  function autoPoss(t){
+    const base = (t.shots >= 15 ? 7 : 5);
+    return clamp(base + (t.gpg > 1.7 ? 1 : 0), 1, 10);
+  }
+
+  /* ===========================================================
+       14. Auto Absence Impact
+       Mengambil dari teks absensi
+       (CB, GK, DM → minus besar; winger → medium)
+  ============================================================ */
+  function autoAbsenceImpact(abs){
+    if(!abs) return 0;
+
+    const s = String(abs).toLowerCase();
+    let imp = 0;
+
+    if(s.includes("gk")) imp += 2.2;
+    if(s.includes("keeper")) imp += 2.2;
+
+    if(s.includes("cb")) imp += 1.8;
+    if(s.includes("center back")) imp += 1.8;
+
+    if(s.includes("dm")) imp += 1.5;
+    if(s.includes("cdm")) imp += 1.7;
+
+    if(s.includes("striker") || s.includes("fw")) imp += 1.4;
+    if(s.includes("wing")) imp += 0.9;
+
+    return clamp(imp, 0, 4);
+  }
+
+  /* ===========================================================
+       15. Auto Tactical Shape (kasar)
+  ============================================================ */
+  function autoTacticalShape(t){
+    // berdasarkan build, pressres, poss
+    const pos = autoPoss(t);
+    const shape = clamp( (pos*0.4 + t.build*0.35 + t.pressres*0.25), 1, 10 );
+    return shape;
+  }
+
+  /* ===========================================================
+       16. FINAL AUTO PACK (generator)
+       MENGAMBIL input minimal → MENGEMBALIKAN paket lengkap
+  ============================================================ */
+  function autoTeam(raw){
+    const t = {
+      name     : raw.name || "TEAM",
+      gpg      : num(raw.gpg),
+      gc       : num(raw.gc),
+      shots    : num(raw.shots),
+      shc      : num(raw.shc),
+      form_raw : raw.form_raw || "",
+      abs      : raw.abs || ""
+    };
+
+    // form
+    t.form = calcFormScore(t.form_raw);
+
+    // quality & stability
+    t.quality = raw.quality ? clamp(num(raw.quality),1,10) : autoQuality(t);
+    t.stab    = raw.stab    ? clamp(num(raw.stab),1,10)    : autoStability(t);
+
+    // GK
+    t.gk = autoGK(t);
+
+    // efficiency
+    t.conv = autoConv(t);
+    t.sot  = autoSOT(t);
+    t.cross= autoCrossEff(t);
+
+    // build, pressure, xt, transition, wave
+    t.build     = autoBuild(t);
+    t.pressres  = autoPressRes(t);
+    t.xthreat   = autoXThreat(t);
+    t.dm15      = autoDM15(t);
+    t.trans     = autoTransition(t);
+    t.wave      = autoWave(t);
+    t.poss_t    = autoPoss(t);
+
+    // absensi impact
+    t.abs_imp   = autoAbsenceImpact(t.abs);
+
+    // tactical shape
+    t.shape     = autoTacticalShape(t);
+
+    return t;
+  }
+
+  V400.AutoTeam = autoTeam;
+
+})(window);
+</script>
+<!-- ===========================================================
+     v400 PART 4 — OMEGA ENGINE
+     Mengubah AutoTeam(Home/Away) → Phase, Attack, Defense, Chain, Lambda
+     • Netral (tanpa odds)
+     • Tidak condong ke Home/Away atau Over/Under
+=========================================================== -->
+<script>
+(function(global){
+  "use strict";
+
+  const V400  = global.V400  = global.V400 || {};
+  const num    = V400.num;
+  const clamp  = V400.clamp;
+  const norm10 = V400.norm10;
+
+  /* ---------------------------------------------------------
+     Helper phase 1–10 → 0–1
+  --------------------------------------------------------- */
+  function phase01(v){
+    return clamp(num(v),1,10)/10;
+  }
+
+  /* ---------------------------------------------------------
+     Hitung Phase Attack/Defense berdasarkan auto stats
+  --------------------------------------------------------- */
+  function computePhases(t){
+    // Build-up
+    const build =
+      norm10(t.build)*0.45 +
+      norm10(t.pressres)*0.25 +
+      norm10(t.poss_t)*0.30;
+
+    // Progression
+    const progress =
+      norm10(t.build)*0.30 +
+      norm10(t.poss_t)*0.35 +
+      norm10(t.shape)*0.35;
+
+    // Chance Creation
+    const creation =
+      norm10(t.xthreat)*0.55 +
+      norm10(t.shots)*0.20 +
+      norm10(t.quality)*0.25;
+
+    // Conversion
+    const conversion =
+      norm10(t.conv)*0.55 +
+      norm10(t.sot)*0.25 +
+      norm10(t.gpg*3)*0.20;
+
+    // Protection (defense)
+    const invGC  = clamp(2.8 - t.gc,0,2.8);
+    const invSHC = clamp(24  - t.shc,0,24);
+
+    const protection =
+      norm10(t.gk)*0.35 +
+      norm10(t.stab)*0.25 +
+      (invGC/2.8)*0.22 +
+      (invSHC/24)*0.18;
+
+    return {
+      build     : clamp(build,0,1),
+      progress  : clamp(progress,0,1),
+      creation  : clamp(creation,0,1),
+      conversion: clamp(conversion,0,1),
+      protection: clamp(protection,0,1)
+    };
+  }
+
+  /* ---------------------------------------------------------
+     Attack Strength (0–1)
+  --------------------------------------------------------- */
+  function computeAttackStrength(t, ph){
+    const atkCore =
+      norm10(t.quality)*0.25 +
+      norm10(t.form)*0.20 +
+      norm10(t.xthreat)*0.25 +
+      norm10(t.wave)*0.15 +
+      norm10(t.poss_t)*0.15;
+
+    const chain =
+      ph.build*0.25 +
+      ph.progress*0.25 +
+      ph.creation*0.35 +
+      ph.conversion*0.15;
+
+    let atk = atkCore*0.6 + chain*0.4;
+
+    // Absence penalty
+    atk -= clamp(t.abs_imp,0,4)*0.03;
+
+    return clamp(atk,0.05,1);
+  }
+
+  /* ---------------------------------------------------------
+     Defense Strength (0–1)
+  --------------------------------------------------------- */
+  function computeDefenseStrength(t, ph){
+    const invGC  = clamp(2.8 - t.gc,0,2.8);
+    const invSHC = clamp(24  - t.shc,0,24);
+
+    const defCore =
+      norm10(t.gk)*0.30 +
+      norm10(t.stab)*0.25 +
+      (invGC/2.8)*0.25 +
+      (invSHC/24)*0.20;
+
+    const protPhase =
+      ph.protection*0.65 +
+      (1 - ph.creation)*0.35;
+
+    let def = defCore*0.65 + protPhase*0.35;
+
+    // Absence penalty
+    def -= clamp(t.abs_imp,0,4)*0.03;
+
+    return clamp(def,0.05,1);
+  }
+
+  /* ---------------------------------------------------------
+     Threat Chain (0–1)
+  --------------------------------------------------------- */
+  function computeChain(ph, atk){
+    const c =
+      ph.build*0.18 +
+      ph.progress*0.18 +
+      ph.creation*0.28 +
+      ph.conversion*0.21 +
+      atk*0.15;
+
+    return clamp(c,0,1);
+  }
+
+  /* ---------------------------------------------------------
+     Lambda dasar (xG awal sebelum konteks)
+  --------------------------------------------------------- */
+  function computeLambdaBase(H,A, atkH,atkA, defH,defA, chainH,chainA){
+    const baseH = clamp(
+      H.gpg*0.60 + A.gc*0.40,
+      0.1, 3.5
+    );
+    const baseA = clamp(
+      A.gpg*0.60 + H.gc*0.40,
+      0.1, 3.5
+    );
+
+    const factorH =
+      (atkH*0.6 + (1-defA)*0.4) * (0.85 + chainH*0.25);
+
+    const factorA =
+      (atkA*0.6 + (1-defH)*0.4) * (0.85 + chainA*0.25);
+
+    const lamH = clamp(baseH * clamp(factorH,0.6,1.6), 0.05, 4.0);
+    const lamA = clamp(baseA * clamp(factorA,0.6,1.6), 0.05, 4.0);
+
+    return { H: lamH, A: lamA };
+  }
+
+  /* ---------------------------------------------------------
+     OMEGA ENGINE v400
+  --------------------------------------------------------- */
+  function Omega_v400(pkg){
+    const H = pkg.home;
+    const A = pkg.away;
+
+    // 1) Phase
+    const phH = computePhases(H);
+    const phA = computePhases(A);
+
+    // 2) Attack & Defense Strength
+    const atkH = computeAttackStrength(H, phH);
+    const atkA = computeAttackStrength(A, phA);
+
+    const defH = computeDefenseStrength(H, phH);
+    const defA = computeDefenseStrength(A, phA);
+
+    // 3) Threat Chain
+    const chainH = computeChain(phH, atkH);
+    const chainA = computeChain(phA, atkA);
+
+    // 4) Lambda dasar
+    const lambda = computeLambdaBase(
+      H,A,
+      atkH,atkA,
+      defH,defA,
+      chainH,chainA
+    );
+
+    return {
+      phase:{
+        H: phH,
+        A: phA
+      },
+      attack:{
+        H: atkH,
+        A: atkA
+      },
+      defense:{
+        H: defH,
+        A: defA
+      },
+      chain:{
+        H: chainH,
+        A: chainA
+      },
+      lambda: lambda
+    };
+  }
+
+  V400.Omega = Omega_v400;
+
+})(window);
+</script>
+<!-- ===========================================================
+     v400 PART 5 — TACTICAL ENGINE
+     Input : {home: autoTeam, away: autoTeam, omega, ctx?}
+     Output: Objek taktikal untuk simulasi & laporan.
+=========================================================== -->
+<script>
+(function(global){
+  "use strict";
+
+  const V400  = global.V400 = global.V400 || {};
+  const num    = V400.num;
+  const clamp  = V400.clamp;
+  const norm10 = V400.norm10;
+
+  /* ---------------------------------------------------------
+     1. PRESS vs BUILD-UP
+     - Seberapa agresif pressing
+     - Seberapa nyaman build-up di bawah tekanan
+  --------------------------------------------------------- */
+  function computePressBuild(home, away, omega){
+    const H = home, A = away;
+
+    // intensitas pressing (1–10)
+    const pressH = clamp(
+      norm10(H.shape)*4 +
+      norm10(H.trans)*3 +
+      norm10(H.wave)*3,
+      1, 10
+    );
+
+    const pressA = clamp(
+      norm10(A.shape)*4 +
+      norm10(A.trans)*3 +
+      norm10(A.wave)*3,
+      1, 10
+    );
+
+    // kemampuan build-up melawan pressing (semakin tinggi semakin aman)
+    const buildResH = clamp(
+      norm10(H.build)*6 +
+      norm10(H.pressres)*4,
+      1, 10
+    );
+    const buildResA = clamp(
+      norm10(A.build)*6 +
+      norm10(A.pressres)*4,
+      1, 10
+    );
+
+    // "under press difficulty" (semakin tinggi semakin menderita)
+    const underPressH = clamp(
+      10 - buildResH + (pressA-5)*0.7,
+      1, 10
+    );
+    const underPressA = clamp(
+      10 - buildResA + (pressH-5)*0.7,
+      1, 10
+    );
+
+    return {
+      home_press_intensity : pressH,
+      away_press_intensity : pressA,
+      home_build_res       : buildResH,
+      away_build_res       : buildResA,
+      home_under_press     : underPressH,
+      away_under_press     : underPressA
+    };
+  }
+
+  /* ---------------------------------------------------------
+     2. LOW BLOCK vs BREAK
+     - Siapa cenderung parkir bus / low block
+     - Siapa jago membongkar low block
+  --------------------------------------------------------- */
+  function computeLowBlock(home, away, omega){
+    const H = home, A = away;
+
+    // kecenderungan low block (1–10)
+    const lbH = clamp(
+      (A.quality > H.quality ? 1 : 0)*3 +
+      norm10( (H.shc - H.shots) + 10 )*4 +
+      (H.gpg < 1.2 ? 2 : 0),
+      1, 10
+    );
+
+    const lbA = clamp(
+      (H.quality > A.quality ? 1 : 0)*3 +
+      norm10( (A.shc - A.shots) + 10 )*4 +
+      (A.gpg < 1.2 ? 2 : 0),
+      1, 10
+    );
+
+    // kemampuan membongkar low block → kombinasi build + xThreat + poss
+    const phH = omega.phase.H;
+    const phA = omega.phase.A;
+
+    const breakLB_H = clamp(
+      norm10(H.build)*3.0 +
+      norm10(H.xthreat)*3.5 +
+      norm10(H.poss_t)*3.5 +
+      phH.creation*10*2.0,
+      1, 10
+    );
+
+    const breakLB_A = clamp(
+      norm10(A.build)*3.0 +
+      norm10(A.xthreat)*3.5 +
+      norm10(A.poss_t)*3.5 +
+      phA.creation*10*2.0,
+      1, 10
+    );
+
+    return {
+      home_lb_tendency       : lbH,
+      away_lb_tendency       : lbA,
+      home_break_lowblock    : breakLB_H,
+      away_break_lowblock    : breakLB_A
+    };
+  }
+
+  /* ---------------------------------------------------------
+     3. TRANSITION ATTACK & VULNERABILITY
+  --------------------------------------------------------- */
+  function computeTransition(home, away, omega){
+    const H = home, A = away;
+
+    // kekuatan serangan transisi
+    const transAtkH = clamp(
+      norm10(H.trans)*5 +
+      norm10(H.wave)*3 +
+      norm10(H.quality)*2,
+      1, 10
+    );
+
+    const transAtkA = clamp(
+      norm10(A.trans)*5 +
+      norm10(A.wave)*3 +
+      norm10(A.quality)*2,
+      1, 10
+    );
+
+    // kerentanan transisi dihitung dari GC, SHC, dan build/pres
+    function vulnTrans(t){
+      const base = clamp(
+        (t.gc*2.4) + (t.shc*0.12),
+        0, 10
+      );
+      const shield = norm10(t.build)*2.5 + norm10(t.pressres)*2.5;
+      return clamp(base + (10 - shield)*0.7, 1, 10);
+    }
+
+    const vulnH = vulnTrans(H);
+    const vulnA = vulnTrans(A);
+
+    return {
+      home_trans_attack : transAtkH,
+      away_trans_attack : transAtkA,
+      home_vuln_trans   : vulnH,
+      away_vuln_trans   : vulnA
+    };
+  }
+
+  /* ---------------------------------------------------------
+     4. WIDTH vs CENTRAL
+  --------------------------------------------------------- */
+  function computeWidthProfile(home, away){
+    const H = home, A = away;
+
+    // Lebar serangan banyak dari crossing
+    const wideH = clamp(
+      norm10(H.cross)*5 +
+      norm10(H.shots)*2 +
+      norm10(H.shape)*3,
+      1, 10
+    );
+    const wideA = clamp(
+      norm10(A.cross)*5 +
+      norm10(A.shots)*2 +
+      norm10(A.shape)*3,
+      1, 10
+    );
+
+    // Serangan sentral dari poss & build & quality
+    const centralH = clamp(
+      norm10(H.poss_t)*4 +
+      norm10(H.build)*3 +
+      norm10(H.quality)*3,
+      1, 10
+    );
+    const centralA = clamp(
+      norm10(A.poss_t)*4 +
+      norm10(A.build)*3 +
+      norm10(A.quality)*3,
+      1, 10
+    );
+
+    return {
+      home : { wide: wideH, central: centralH },
+      away : { wide: wideA, central: centralA }
+    };
+  }
+
+  /* ---------------------------------------------------------
+     5. CONTROL PROFILE (siapa kontrol possession / tempo)
+  --------------------------------------------------------- */
+  function computeControlProfile(home, away, omega, ctx){
+    const H = home, A = away;
+
+    const ctrlH = clamp(
+      norm10(H.poss_t)*4 +
+      norm10(H.build)*3 +
+      norm10(H.quality)*2 +
+      norm10(H.stab)*1,
+      1, 10
+    );
+    const ctrlA = clamp(
+      norm10(A.poss_t)*4 +
+      norm10(A.build)*3 +
+      norm10(A.quality)*2 +
+      norm10(A.stab)*1,
+      1, 10
+    );
+
+    const delta = ctrlH - ctrlA;
+    let side = "balanced";
+    if(delta > 0.8) side = "home";
+    else if(delta < -0.8) side = "away";
+
+    return {
+      home  : ctrlH,
+      away  : ctrlA,
+      delta : delta,
+      side  : side
+    };
+  }
+
+  /* ---------------------------------------------------------
+     6. TAKTIK RINGKAS (notes) untuk laporan
+  --------------------------------------------------------- */
+  function buildNotes(pb, lb, tr, width, ctrl){
+    const notes = [];
+
+    // pressing
+    if(pb.home_press_intensity >= 7 && pb.away_press_intensity >= 7){
+      notes.push("Kedua tim memiliki pressing tinggi → risiko laga intens & chaos meningkat.");
+    } else if(pb.home_press_intensity >= 7){
+      notes.push("Home memiliki pressing lebih agresif, berpotensi menekan build-up Away.");
+    } else if(pb.away_press_intensity >= 7){
+      notes.push("Away memiliki pressing lebih agresif, berpotensi menekan build-up Home.");
+    }
+
+    // low block
+    if(lb.home_lb_tendency >= 7 && lb.away_lb_tendency <= 5){
+      notes.push("Home cenderung low block saat tertekan, sementara Away memiliki peluang lebih untuk menguasai bola.");
+    }
+    if(lb.away_lb_tendency >= 7 && lb.home_lb_tendency <= 5){
+      notes.push("Away cenderung low block, Home berpotensi dominan dalam build-up.");
+    }
+
+    // transisi
+    if(tr.home_trans_attack >= 7 && tr.away_vuln_trans >= 7){
+      notes.push("Transisi serangan Home kuat dan Away cukup rentan terhadap serangan balik.");
+    }
+    if(tr.away_trans_attack >= 7 && tr.home_vuln_trans >= 7){
+      notes.push("Transisi serangan Away kuat dan Home cukup rentan terhadap serangan balik.");
+    }
+
+    // width vs central
+    if(width.home.wide >= 7 && width.away.central >= 7){
+      notes.push("Home cenderung menyerang melebar, sedangkan Away lebih banyak menyerang melalui area tengah.");
+    }
+    if(width.away.wide >= 7 && width.home.central >= 7){
+      notes.push("Away cenderung menyerang melebar, sementara Home lebih kuat di area tengah.");
+    }
+
+    // control
+    if(ctrl.side === "home"){
+      notes.push("Home sedikit lebih berpeluang mengontrol tempo & possession.");
+    } else if(ctrl.side === "away"){
+      notes.push("Away sedikit lebih berpeluang mengontrol tempo & possession.");
+    } else {
+      notes.push("Kontrol pertandingan cenderung seimbang di atas kertas.");
+    }
+
+    return notes;
+  }
+
+  /* ---------------------------------------------------------
+     7. TACTICAL ENGINE v400 MAIN
+     Input: {home, away, omega, ctx?}
+  --------------------------------------------------------- */
+  function Tactical_v400(pkg){
+    const home  = pkg.home;
+    const away  = pkg.away;
+    const omega = pkg.omega;
+    const ctx   = pkg.ctx || {};
+
+    const pressBuild = computePressBuild(home, away, omega);
+    const lowBlock   = computeLowBlock(home, away, omega);
+    const trans      = computeTransition(home, away, omega);
+    const widthProf  = computeWidthProfile(home, away);
+    const control    = computeControlProfile(home, away, omega, ctx);
+
+    const notes      = buildNotes(
+      pressBuild,
+      lowBlock,
+      trans,
+      widthProf,
+      control
+    );
+
+    return {
+      press_vs_build     : pressBuild,
+      lowblock_vs_break  : lowBlock,
+      transition_profile : trans,
+      width_profile      : widthProf,
+      control_profile    : control,
+      notes              : notes
+    };
+  }
+
+  // EXPORT
+  V400.Tactical = Tactical_v400;
+
+})(window);
+</script>
+<!-- ===========================================================
+     v400 PART 6 — CONTEXT ENGINE
+     Input : ctxRaw (dari UI minimal v400)
+     Output: context terstruktur (tempo, chaos, importance, dll.)
+=========================================================== -->
+<script>
+(function(global){
+  "use strict";
+
+  const V400   = global.V400 = global.V400 || {};
+  const num    = V400.num;
+  const clamp  = V400.clamp;
+  const safeStr= V400.safeStr;
+
+  /* ---------------------------------------------------------
+     1. PROFIL LIGA (default heuristic)
+  --------------------------------------------------------- */
+  function leagueProfile(leagueRaw){
+    const s = safeStr(leagueRaw).toLowerCase();
+
+    // default
+    let tempo  = 6;
+    let chaos  = 5;
+    let goals  = 2.7;
+
+    if(s.includes("bundesliga")){
+      tempo = 7.5; chaos = 6.5; goals = 3.1;
+    } else if(s.includes("premier")){
+      tempo = 7; chaos = 6; goals = 2.9;
+    } else if(s.includes("serie a")){
+      tempo = 6; chaos = 5.5; goals = 2.6;
+    } else if(s.includes("la liga")){
+      tempo = 5.8; chaos = 5; goals = 2.5;
+    } else if(s.includes("ligue 1")){
+      tempo = 6.2; chaos = 5.5; goals = 2.7;
+    } else if(s.includes("eredivisie")){
+      tempo = 6.8; chaos = 6.2; goals = 3.0;
+    } else if(s.includes("mls")){
+      tempo = 7.2; chaos = 6.8; goals = 3.2;
+    } else if(s.includes("j league") || s.includes("j1")){
+      tempo = 6.5; chaos = 5.8; goals = 2.7;
+    } else if(s.includes("liga 1") && s.includes("ind")){
+      tempo = 5.3; chaos = 6.2; goals = 2.5;
+    } else if(s.includes("ucl") || s.includes("champions league")){
+      tempo = 6.8; chaos = 5.5; goals = 2.8;
+    } else if(s.includes("uel") || s.includes("europa")){
+      tempo = 6.5; chaos = 5.8; goals = 2.8;
+    }
+
+    return {
+      league_name: leagueRaw || "",
+      tempo_base : tempo,
+      chaos_base : chaos,
+      goals_base : goals
+    };
+  }
+
+  /* ---------------------------------------------------------
+     2. PROFIL MODE (league / cup / derby / final / intl / dll.)
+  --------------------------------------------------------- */
+  function modeProfile(modeRaw){
+    const m = safeStr(modeRaw).toLowerCase();
+    let importance = 5;
+    let tempoMod   = 0;
+    let chaosMod   = 0;
+    let neutral    = false;
+
+    if(m === "league" || m === ""){
+      importance = 5; tempoMod = 0; chaosMod = 0;
+    } else if(m === "cup"){
+      importance = 7; tempoMod = -0.2; chaosMod = 0.8;
+    } else if(m === "ucl" || m === "uel"){
+      importance = 8; tempoMod = 0.3; chaosMod = 0.7;
+    } else if(m === "derby"){
+      importance = 8.5; tempoMod = 0.4; chaosMod = 1.3;
+    } else if(m === "final"){
+      importance = 9.5; tempoMod = -0.2; chaosMod = 1.0; neutral = true;
+    } else if(m === "title"){
+      importance = 9; tempoMod = -0.1; chaosMod = 0.9;
+    } else if(m === "relegation"){
+      importance = 8.5; tempoMod = -0.3; chaosMod = 1.1;
+    } else if(m === "intl"){
+      importance = 7.5; tempoMod = -0.1; chaosMod = 0.7;
+    } else if(m === "friendly"){
+      importance = 4.5; tempoMod = -0.2; chaosMod = -0.5;
+    }
+
+    return {
+      mode_name   : modeRaw || "",
+      importance  : importance,
+      tempo_mod   : tempoMod,
+      chaos_mod   : chaosMod,
+      neutral_site: neutral
+    };
+  }
+
+  /* ---------------------------------------------------------
+     3. PROFIL CUACA
+  --------------------------------------------------------- */
+  function weatherProfile(weatherRaw){
+    const w = safeStr(weatherRaw).toLowerCase();
+    let tempoMod = 0;
+    let chaosMod = 0;
+
+    if(w === "clear" || w === ""){
+      tempoMod = 0; chaosMod = 0;
+    } else if(w === "rain"){
+      tempoMod = -0.3; chaosMod = 0.3;
+    } else if(w === "heavy_rain"){
+      tempoMod = -0.6; chaosMod = 0.6;
+    } else if(w === "snow"){
+      tempoMod = -0.7; chaosMod = 0.4;
+    } else if(w === "windy"){
+      tempoMod = -0.2; chaosMod = 0.5;
+    }
+
+    return {
+      weather: weatherRaw || "",
+      tempo_mod: tempoMod,
+      chaos_mod: chaosMod
+    };
+  }
+
+  /* ---------------------------------------------------------
+     4. PROFIL LAPANGAN
+  --------------------------------------------------------- */
+  function pitchProfile(pitchRaw){
+    const p = safeStr(pitchRaw).toLowerCase();
+    let tempoMod = 0;
+    let chaosMod = 0;
+
+    if(p === "good" || p === "" || p === "normal"){
+      tempoMod = 0; chaosMod = 0;
+    } else if(p === "medium"){
+      tempoMod = -0.1; chaosMod = 0.1;
+    } else if(p === "bad"){
+      tempoMod = -0.4; chaosMod = 0.3;
+    } else if(p === "wet"){
+      tempoMod = -0.3; chaosMod = 0.4;
+    }
+
+    return {
+      pitch: pitchRaw || "",
+      tempo_mod: tempoMod,
+      chaos_mod: chaosMod
+    };
+  }
+
+  /* ---------------------------------------------------------
+     5. H2H PROFIL (beri sedikit info chaos & goals)
+     Format ekspektasi: "2-1,1-1,0-3,..."
+  --------------------------------------------------------- */
+  function h2hProfile(h2hRaw){
+    const text = safeStr(h2hRaw).trim();
+    if(!text) return {
+      avg_goals: 2.5,
+      tight_ratio: 0.5,
+      chaos_mod: 0,
+      importance_mod: 0,
+      desc: "H2H tidak diisi."
+    };
+
+    const matches = text.split(/[,;]+/).map(s => s.trim()).filter(Boolean);
+    let totalGoals = 0;
+    let n = 0;
+    let tightCount = 0; // selisih gol ≤ 1
+
+    matches.forEach(m=>{
+      const sp = m.split("-");
+      if(sp.length !== 2) return;
+      const a = num(sp[0]);
+      const b = num(sp[1]);
+      if(isNaN(a) || isNaN(b)) return;
+      totalGoals += (a+b);
+      n++;
+      if(Math.abs(a-b) <= 1) tightCount++;
+    });
+
+    if(n === 0){
+      return {
+        avg_goals: 2.5,
+        tight_ratio: 0.5,
+        chaos_mod: 0,
+        importance_mod: 0,
+        desc: "Format H2H tidak terbaca, gunakan 2-1,1-1,0-3."
+      };
+    }
+
+    const avgG   = totalGoals / n;
+    const tightR = tightCount / n;
+
+    let chaosMod = 0;
+    if(avgG >= 3){ chaosMod += 0.4; }
+    if(tightR >= 0.7){ chaosMod += 0.3; } // sering ketat → tensi tinggi
+
+    let impMod = (tightR >= 0.6 ? 0.4 : 0.1);
+
+    return {
+      avg_goals    : avgG,
+      tight_ratio  : tightR,
+      chaos_mod    : chaosMod,
+      importance_mod: impMod,
+      desc         : "H2H rata-rata gol: "+avgG.toFixed(2)+", tight ratio: "+tightR.toFixed(2)
+    };
+  }
+
+  /* ---------------------------------------------------------
+     6. Wasit (Referee) — sangat sederhana
+     (tanpa database, hanya default)
+  --------------------------------------------------------- */
+  function refProfile(refNameRaw){
+    const name = safeStr(refNameRaw).trim();
+    if(!name){
+      return {
+        ref_name: "",
+        strict  : 6
+      };
+    }
+    // Default netral
+    let strict = 6;
+    // Bisa ditambah heuristik nama jika mau, untuk sekarang netral.
+    return {
+      ref_name: name,
+      strict  : strict
+    };
+  }
+
+  /* ---------------------------------------------------------
+     7. Hitung Home Advantage & Fatigue (simple)
+  --------------------------------------------------------- */
+  function homeAdvAndFatigue(modeProf, leagueProf, noteRaw){
+    let homeAdv = 0.35; // default
+    if(modeProf.neutral_site){
+      homeAdv = 0.1;
+    } else {
+      // beberapa liga home advantage beda
+      const s = safeStr(leagueProf.league_name).toLowerCase();
+      if(s.includes("bundesliga") || s.includes("turkey")){
+        homeAdv = 0.38;
+      } else if(s.includes("liga 1") && s.includes("ind")){
+        homeAdv = 0.4;
+      } else if(s.includes("ucl") || s.includes("europa")){
+        homeAdv = 0.3;
+      }
+    }
+
+    // Fatigue: heuristik dari catatan
+    const note = safeStr(noteRaw).toLowerCase();
+    let fatigue = 0.3; // baseline
+    if(note.includes("3 hari") || note.includes("three days")){
+      fatigue += 0.3;
+    }
+    if(note.includes("rotasi besar") || note.includes("heavy rotation")){
+      fatigue -= 0.2;
+    }
+    fatigue = clamp(fatigue,0,1);
+
+    return {home_adv: homeAdv, fatigue_bias: fatigue};
+  }
+
+  /* ---------------------------------------------------------
+     8. CONTEXT ENGINE v400 MAIN
+     ctxRaw:
+     {
+       league, mode, weather, pitch,
+       h2h, note, ref, extra
+     }
+  --------------------------------------------------------- */
+  function Context_v400(ctxRaw){
+    const leagueRaw  = ctxRaw.league || "";
+    const modeRaw    = ctxRaw.mode   || "";
+    const weatherRaw = ctxRaw.weather|| "";
+    const pitchRaw   = ctxRaw.pitch  || "";
+    const h2hRaw     = ctxRaw.h2h    || "";
+    const noteRaw    = ctxRaw.note   || "";
+    const refRaw     = ctxRaw.ref    || "";
+    const extraRaw   = ctxRaw.extra  || "";
+
+    const leagueProf  = leagueProfile(leagueRaw);
+    const modeProf    = modeProfile(modeRaw);
+    const weatherProf = weatherProfile(weatherRaw);
+    const pitchProf   = pitchProfile(pitchRaw);
+    const h2hProf     = h2hProfile(h2hRaw);
+    const refProf     = refProfile(refRaw);
+
+    // BASE tempo & chaos
+    let tempo = leagueProf.tempo_base;
+    let chaos = leagueProf.chaos_base;
+
+    // MODE
+    tempo += modeProf.tempo_mod;
+    chaos += modeProf.chaos_mod;
+
+    // WEATHER + PITCH
+    tempo += weatherProf.tempo_mod + pitchProf.tempo_mod;
+    chaos += weatherProf.chaos_mod + pitchProf.chaos_mod;
+
+    // H2H
+    chaos += h2hProf.chaos_mod;
+    let importance = modeProf.importance + h2hProf.importance_mod;
+
+    // clamp
+    tempo      = clamp(tempo,1,10);
+    chaos      = clamp(chaos,1,10);
+    importance = clamp(importance,1,10);
+
+    const refStrict = clamp(refProf.strict,1,10);
+
+    const advFat = homeAdvAndFatigue(modeProf, leagueProf, noteRaw + " " + extraRaw);
+
+    // catatan
+    const notes = [];
+    notes.push("Liga: " + (leagueProf.league_name || "tidak diisi") +
+               " · Tempo basis: " + leagueProf.tempo_base.toFixed(1) +
+               " · Chaos basis: " + leagueProf.chaos_base.toFixed(1));
+    notes.push("Mode: " + (modeProf.mode_name || "league") +
+               " · Importance: " + importance.toFixed(1) +
+               " · Neutral site: " + (modeProf.neutral_site?"Ya":"Tidak"));
+    notes.push(h2hProf.desc);
+    if(refProf.ref_name){
+      notes.push("Wasit: " + refProf.ref_name + " · Strictness: " + refStrict.toFixed(1));
+    }
+    if(noteRaw.trim()){
+      notes.push("Catatan: " + noteRaw.trim());
+    }
+    if(extraRaw.trim()){
+      notes.push("Extra: " + extraRaw.trim());
+    }
+
+    return {
+      league    : leagueProf.league_name,
+      mode      : modeProf.mode_name || "league",
+      weather   : weatherProf.weather || "clear",
+      pitch     : pitchProf.pitch || "good",
+      h2h_raw   : h2hRaw,
+      note      : noteRaw,
+      extra     : extraRaw,
+
+      tempo     : tempo,
+      chaos     : chaos,
+      importance: importance,
+      ref_strict: refStrict,
+      home_adv  : advFat.home_adv,
+      fatigue_bias: advFat.fatigue_bias,
+
+      league_profile : leagueProf,
+      mode_profile   : modeProf,
+      weather_profile: weatherProf,
+      pitch_profile  : pitchProf,
+      h2h_profile    : h2hProf,
+      ref_profile    : refProf,
+
+      notes: notes
+    };
+  }
+
+  // EXPORT
+  V400.Context = Context_v400;
+
+})(window);
+</script>
+<!-- ===========================================================
+     v400 PART 7 — SIMULATION ENGINE
+     Input : {omega, context}
+     Output: berbagai skenario distribusi skor & peluang H/D/A, OU
+=========================================================== -->
+<script>
+(function(global){
+  "use strict";
+
+  const V400   = global.V400 = global.V400 || {};
+  const num    = V400.num;
+  const clamp  = V400.clamp;
+  const poisson= V400.poisson;
+
+  /* ---------------------------------------------------------
+     1. Penyesuaian lambda dengan tempo/chaos/importance
+  --------------------------------------------------------- */
+  function adjustLambdaBase(lambda, ctx){
+    let lamH = num(lambda.H);
+    let lamA = num(lambda.A);
+
+    const tempo  = clamp(ctx.tempo || 6, 1,10);
+    const chaos  = clamp(ctx.chaos || 5, 1,10);
+    const imp    = clamp(ctx.importance || 5, 1,10);
+
+    // tempo ↑ → gol sedikit naik
+    const tFactor = 1 + (tempo - 5)*0.03;   // ±0.15
+    // chaos ↑ → gol & spread sedikit naik
+    const cFactor = 1 + (chaos - 5)*0.04;   // ±0.20
+    // importance tinggi → bisa dua arah:
+    //   final/tittle → hati-hati (lebih ketat)
+    //   derby/relegation → chaos
+    let iFactor = 1;
+    if(imp >= 8){
+      // laga besar, bila context.duel penting: sedikit turunkan
+      iFactor = 0.96;
+    } else if(imp <= 4){
+      iFactor = 1.02;
+    }
+
+    const factor = tFactor * cFactor * iFactor;
+
+    lamH = clamp(lamH * factor, 0.05, 4.5);
+    lamA = clamp(lamA * factor, 0.05, 4.5);
+
+    return {H: lamH, A: lamA};
+  }
+
+  /* ---------------------------------------------------------
+     2. Bangun matriks skor Poisson 0..maxG
+  --------------------------------------------------------- */
+  function buildScoreMatrix(lamH, lamA, maxG){
+    maxG = maxG || 5;
+    const mat = [];
+    let sumAll = 0;
+
+    for(let h=0; h<=maxG; h++){
+      const row = [];
+      const pH  = poisson(lamH,h);
+      for(let a=0; a<=maxG; a++){
+        const pA = poisson(lamA,a);
+        const p  = pH * pA;
+        row.push(p);
+        sumAll += p;
+      }
+      mat.push(row);
+    }
+
+    // normalisasi kalau perlu
+    if(sumAll <= 0) return {matrix:mat,sum:0};
+    for(let h=0; h<mat.length; h++){
+      for(let a=0; a<mat[h].length; a++){
+        mat[h][a] = mat[h][a] / sumAll;
+      }
+    }
+    return {matrix:mat,sum:1};
+  }
+
+  /* ---------------------------------------------------------
+     3. Hitung H/D/A & OU
+  --------------------------------------------------------- */
+  function summarizeMatrix(matrix){
+    const mat  = matrix.matrix;
+    const maxG = mat.length - 1;
+
+    let pH=0,pD=0,pA=0;
+    let ou25O=0,ou25U=0,ou35O=0,ou35U=0;
+
+    for(let h=0; h<=maxG; h++){
+      for(let a=0; a<=maxG; a++){
+        const p = mat[h][a];
+        if(h>a) pH += p;
+        else if(h===a) pD += p;
+        else pA += p;
+
+        const sum = h+a;
+        if(sum > 2){ ou25O += p; } else { ou25U += p; }
+        if(sum > 3){ ou35O += p; } else { ou35U += p; }
+      }
+    }
+
+    // jaga normalisasi H/D/A tren (kadang rounding)
+    const tot = pH+pD+pA;
+    if(tot > 0){
+      pH /= tot; pD /= tot; pA /= tot;
+    }
+
+    return {
+      pH: pH,
+      pD: pD,
+      pA: pA,
+      ou: {
+        "2.5": { over: ou25O, under: ou25U },
+        "3.5": { over: ou35O, under: ou35U }
+      }
+    };
+  }
+
+  /* ---------------------------------------------------------
+     4. Buat beberapa skenario (tight, base, open, chaos)
+  --------------------------------------------------------- */
+  function makeScenarioPack(lambdaBase, ctx){
+    const lamAdj = adjustLambdaBase(lambdaBase, ctx);
+
+    const chaos  = clamp(ctx.chaos || 5, 1,10);
+    const tempo  = clamp(ctx.tempo || 6, 1,10);
+
+    // faktor dasar
+    const baseH = lamAdj.H;
+    const baseA = lamAdj.A;
+
+    // TIGHT → sedikit lebih rendah dari base
+    const tightFactor = 0.85 - (tempo-5)*0.01;
+    const lamTight = {
+      H: clamp(baseH * tightFactor, 0.03, 3.5),
+      A: clamp(baseA * tightFactor, 0.03, 3.5)
+    };
+
+    // OPEN → sedikit lebih tinggi
+    const openFactor = 1.12 + (tempo-5)*0.02;
+    const lamOpen = {
+      H: clamp(baseH * openFactor, 0.05, 4.8),
+      A: clamp(baseA * openFactor, 0.05, 4.8)
+    };
+
+    // CHAOS → tergantung chaos level
+    const chaosFactor = 1 + (chaos-5)*0.06; // ±0.3
+    const lamChaos = {
+      H: clamp(baseH * chaosFactor, 0.05, 5.0),
+      A: clamp(baseA * chaosFactor, 0.05, 5.0)
+    };
+
+    return {
+      base : lamAdj,
+      tight: lamTight,
+      open : lamOpen,
+      chaos: lamChaos
+    };
+  }
+
+  /* ---------------------------------------------------------
+     5. SIM ENGINE MAIN
+     Input: {omega, context}
+  --------------------------------------------------------- */
+  function Sim_v400(pkg){
+    const omega = pkg.omega;
+    const ctx   = pkg.context;
+
+    const lambdaBase = omega.lambda; // {H,A}
+    const scenLam    = makeScenarioPack(lambdaBase, ctx);
+
+    const maxGoals = 5; // 0..5 untuk setiap tim
+
+    function buildScenario(label, lam){
+      const mat = buildScoreMatrix(lam.H, lam.A, maxGoals);
+      const sum = summarizeMatrix(mat);
+      return {
+        label    : label,
+        lambda   : lam,
+        matrix   : mat.matrix,
+        summary  : sum
+      };
+    }
+
+    const base  = buildScenario("base",  scenLam.base);
+    const tight = buildScenario("tight", scenLam.tight);
+    const open  = buildScenario("open",  scenLam.open);
+    const chaos = buildScenario("chaos", scenLam.chaos);
+
+    // ringkasan kecil global: pakai base scenario
+    const main = base.summary;
+    const ou25 = main.ou["2.5"];
+    const ou35 = main.ou["3.5"];
+
+    return {
+      scenarios:{
+        base,
+        tight,
+        open,
+        chaos
+      },
+      main:{
+        pH: main.pH,
+        pD: main.pD,
+        pA: main.pA,
+        ou25_over: ou25.over,
+        ou25_under: ou25.under,
+        ou35_over: ou35.over,
+        ou35_under: ou35.under
+      },
+      meta:{
+        maxGoals: maxGoals,
+        lambda_base: lambdaBase,
+        lambda_adj : scenLam.base
+      }
+    };
+  }
+
+  // EXPORT
+  V400.Sim = Sim_v400;
+
+})(window);
+</script>
+<!-- ===========================================================
+     v400 PART 8 — REPORT ENGINE
+     Input : {
+       match    : {title,date,time,league},
+       home     : autoTeam,
+       away     : autoTeam,
+       ctxRaw   : {...},   // optional
+       context  : V400.Context(..),
+       omega    : V400.Omega(..),
+       tactical : V400.Tactical(..),
+       sim      : V400.Sim(..)
+     }
+     Output: { text, index }
+=========================================================== -->
+<script>
+(function(global){
+  "use strict";
+
+  const V400    = global.V400 = global.V400 || {};
+  const num     = V400.num;
+  const clamp   = V400.clamp;
+  const safeStr = V400.safeStr;
+
+  function pct(x){
+    return (num(x)*100).toFixed(1) + "%";
+  }
+
+  function fmt1(x){
+    return num(x).toFixed(1);
+  }
+
+  function fmt2(x){
+    return num(x).toFixed(2);
+  }
+
+  /* ---------------------------------------------------------
+     1. Hitung index Reliability & Risk (v400)
+     - berdasarkan kualitas/stabilitas tim
+     - + context.chaos
+     - + sebaran peluang (H/D/A) → makin rata makin tinggi noise
+  --------------------------------------------------------- */
+  function buildIndex(home, away, ctx, sim){
+    const hQuality = clamp(home.quality,1,10);
+    const aQuality = clamp(away.quality,1,10);
+    const hStab    = clamp(home.stab,1,10);
+    const aStab    = clamp(away.stab,1,10);
+
+    const avgQual  = (hQuality + aQuality)/2;
+    const avgStab  = (hStab + aStab)/2;
+
+    const baseRel  = clamp((avgQual*0.5 + avgStab*0.5),1,10);
+
+    const chaos    = clamp(ctx.chaos || 5,1,10);
+    const imp      = clamp(ctx.importance || 5,1,10);
+
+    const pH = sim.main.pH;
+    const pD = sim.main.pD;
+    const pA = sim.main.pA;
+
+    const spread3 = Math.abs(pH-pD) + Math.abs(pD-pA) + Math.abs(pH-pA); // 0..2
+    const noise   = clamp(1 - spread3,0,1); // 0=clear, 1=blur
+
+    let reliability = baseRel;
+    reliability -= (chaos-5)*0.35;
+    reliability -= (noise-0.5)*4;      // ±2
+    reliability  = clamp(reliability,1,10);
+
+    let risk = 6;
+    risk += (chaos-5)*0.55;
+    risk += (noise-0.5)*4;
+    risk -= (reliability-5)*0.25;
+    risk  = clamp(risk,1,10);
+
+    return {
+      reliability: reliability,
+      risk       : risk,
+      detail:{
+        base_reliability: baseRel,
+        chaos: chaos,
+        importance: imp,
+        noise: noise
+      }
+    };
+  }
+
+  /* ---------------------------------------------------------
+     2. Segmen teks: header pertandingan
+  --------------------------------------------------------- */
+  function segmentHeader(match, ctx){
+    const title = safeStr(match.title || "").trim() || "Pertandingan";
+    const league= safeStr(match.league || ctx.league || "").trim();
+    const date  = safeStr(match.date || "").trim();
+    const time  = safeStr(match.time || "").trim();
+
+    let line1 = "=== " + title + " ===";
+    let line2 = "";
+    if(league){
+      line2 += "Kompetisi : " + league;
+    }
+    if(date){
+      line2 += (line2 ? " · " : "") + "Tanggal : " + date;
+    }
+    if(time){
+      line2 += (line2 ? " · " : "") + "Jam : " + time;
+    }
+    let line3 = "Mode      : " + (ctx.mode || "league") +
+                " · Cuaca : " + (ctx.weather || "clear") +
+                " · Lapangan : " + (ctx.pitch || "good");
+
+    return [line1, line2 || null, line3].filter(Boolean).join("\n");
+  }
+
+  /* ---------------------------------------------------------
+     3. Segmen: profil tim singkat
+  --------------------------------------------------------- */
+  function segmentTeamProfile(home, away){
+    const lines = [];
+    lines.push("\n--- Profil Dasar Tim ---");
+    lines.push(
+      "Home: "+home.name+
+      " · GPG: "+fmt2(home.gpg)+
+      " · GC: "+fmt2(home.gc)+
+      " · Shots: "+fmt1(home.shots)+
+      " · Shots conceded: "+fmt1(home.shc)
+    );
+    lines.push(
+      "Away: "+away.name+
+      " · GPG: "+fmt2(away.gpg)+
+      " · GC: "+fmt2(away.gc)+
+      " · Shots: "+fmt1(away.shots)+
+      " · Shots conceded: "+fmt1(away.shc)
+    );
+    lines.push(
+      "Form Home (5 laga): "+(home.form_raw || "-")+
+      " · Rating: "+fmt1(home.form)+"/10"+
+      " · Stability: "+fmt1(home.stab)+"/10"
+    );
+    lines.push(
+      "Form Away (5 laga): "+(away.form_raw || "-")+
+      " · Rating: "+fmt1(away.form)+"/10"+
+      " · Stability: "+fmt1(away.stab)+"/10"
+    );
+    return lines.join("\n");
+  }
+
+  /* ---------------------------------------------------------
+     4. Segmen: Phase & Attack/Defense Strength
+  --------------------------------------------------------- */
+  function segmentOmega(home, away, omega){
+    const phH = omega.phase.H;
+    const phA = omega.phase.A;
+
+    const atkH = omega.attack.H;
+    const atkA = omega.attack.A;
+    const defH = omega.defense.H;
+    const defA = omega.defense.A;
+
+    const lines = [];
+    lines.push("\n--- Attack / Defense Strength (v400) ---");
+    lines.push(
+      "Attack Home: "+fmt1(atkH*10)+"/10"+
+      " · Defense Home: "+fmt1(defH*10)+"/10"+
+      " · Threat chain: "+fmt1(omega.chain.H*10)+"/10"
+    );
+    lines.push(
+      "Attack Away: "+fmt1(atkA*10)+"/10"+
+      " · Defense Away: "+fmt1(defA*10)+"/10"+
+      " · Threat chain: "+fmt1(omega.chain.A*10)+"/10"
+    );
+    lines.push(
+      "Phase Home (build/progress/create/convert/protect): "+
+      fmt1(phH.build*10)+"/"+fmt1(phH.progress*10)+"/"+
+      fmt1(phH.creation*10)+"/"+fmt1(phH.conversion*10)+"/"+
+      fmt1(phH.protection*10)
+    );
+    lines.push(
+      "Phase Away (build/progress/create/convert/protect): "+
+      fmt1(phA.build*10)+"/"+fmt1(phA.progress*10)+"/"+
+      fmt1(phA.creation*10)+"/"+fmt1(phA.conversion*10)+"/"+
+      fmt1(phA.protection*10)
+    );
+
+    return lines.join("\n");
+  }
+
+  /* ---------------------------------------------------------
+     5. Segmen: Context
+  --------------------------------------------------------- */
+  function segmentContext(ctx){
+    const lines = [];
+    lines.push("\n--- Context & Lingkungan Laga ---");
+    lines.push(
+      "Tempo model: "+fmt1(ctx.tempo)+"/10"+
+      " · Chaos: "+fmt1(ctx.chaos)+"/10"+
+      " · Importance: "+fmt1(ctx.importance)+"/10"
+    );
+    lines.push(
+      "Home advantage (relatif): "+fmt2(ctx.home_adv)+
+      " · Fatigue bias (konteks jadwal): "+fmt2(ctx.fatigue_bias)
+    );
+    if(ctx.notes && ctx.notes.length){
+      lines.push("Catatan context:");
+      ctx.notes.forEach(n=>{
+        if(n && n.trim()){
+          lines.push("  - "+n.trim());
+        }
+      });
+    }
+    return lines.join("\n");
+  }
+
+  /* ---------------------------------------------------------
+     6. Segmen: Taktikal
+  --------------------------------------------------------- */
+  function segmentTactical(tac){
+    const lines = [];
+    lines.push("\n--- Gambaran Taktikal ---");
+    if(tac.notes && tac.notes.length){
+      tac.notes.forEach(n=>{
+        if(n && n.trim()){
+          lines.push("  - "+n.trim());
+        }
+      });
+    } else {
+      lines.push("  (Tidak ada catatan taktikal khusus.)");
+    }
+    return lines.join("\n");
+  }
+
+  /* ---------------------------------------------------------
+     7. Segmen: Simulasi Skor & Gol
+  --------------------------------------------------------- */
+  function segmentSimulation(omega, sim){
+    const lines = [];
+    const lamB = sim.meta.lambda_adj;
+    const main = sim.main;
+
+    lines.push("\n--- Distribusi Skor & Gol (tanpa odds) ---");
+    lines.push(
+      "xGoals dasar (setelah konteks) → Home: "+fmt2(lamB.H)+
+      " · Away: "+fmt2(lamB.A)
+    );
+    lines.push(
+      "Peluang hasil (skenario base):"+
+      "\n  Home menang : "+pct(main.pH)+
+      "\n  Seri        : "+pct(main.pD)+
+      "\n  Away menang : "+pct(main.pA)
+    );
+
+    lines.push(
+      "\nEstimasi total gol (base scenario):"+
+      "\n  Over 2.5 : "+pct(main.ou25_over)+
+      " · Under 2.5 : "+pct(main.ou25_under)+
+      "\n  Over 3.5 : "+pct(main.ou35_over)+
+      " · Under 3.5 : "+pct(main.ou35_under)
+    );
+
+    lines.push(
+      "\nCatatan: Angka di atas adalah output model statistik murni, "+
+      "bukan saran untuk memilih salah satu sisi atau pasar tertentu."
+    );
+
+    return lines.join("\n");
+  }
+
+  /* ---------------------------------------------------------
+     8. Segmen: Index Risiko & Reliabilitas
+  --------------------------------------------------------- */
+  function segmentIndex(idx){
+    const lines = [];
+    lines.push("\n--- Index v400 (Risiko & Reliabilitas) ---");
+    lines.push(
+      "Reliability (seberapa stabil pola data) : "+fmt1(idx.reliability)+"/10"
+    );
+    lines.push(
+      "Risk (seberapa mudah terjadi hasil di luar pola) : "+fmt1(idx.risk)+"/10"
+    );
+    lines.push(
+      "Keterangan singkat: reliabilitas tinggi → model lebih mudah dipercaya; "+
+      "risk tinggi → lebih banyak skenario \"aneh\" yang tetap punya peluang."
+    );
+    return lines.join("\n");
+  }
+
+  /* ---------------------------------------------------------
+     9. MAIN REPORT ENGINE
+  --------------------------------------------------------- */
+  function Report_v400(pkg){
+    const match    = pkg.match   || {};
+    const home     = pkg.home;
+    const away     = pkg.away;
+    const ctxRaw   = pkg.ctxRaw || {};
+    const context  = pkg.context;
+    const omega    = pkg.omega;
+    const tactical = pkg.tactical;
+    const sim      = pkg.sim;
+
+    // index
+    const idx = buildIndex(home, away, context, sim);
+
+    const chunks = [];
+    chunks.push(segmentHeader(match, context));
+    chunks.push(segmentTeamProfile(home, away));
+    chunks.push(segmentOmega(home, away, omega));
+    chunks.push(segmentContext(context));
+    chunks.push(segmentTactical(tactical));
+    chunks.push(segmentSimulation(omega, sim));
+    chunks.push(segmentIndex(idx));
+
+    const text = chunks.join("\n");
+
+    return {
+      text : text,
+      index: idx
+    };
+  }
+
+  // EXPORT
+  V400.Report = Report_v400;
+
+})(window);
+</script>
+<!-- ===========================================================
+     v400 PART 9 — VISUAL ENGINE
+     Radar + Balance Bar (tidak condong ke sisi mana pun)
+     Fungsi:
+       V400.Visual.renderRadar(...)
+       V400.Visual.renderBalance(...)
+=========================================================== -->
+<script>
+(function(global){
+  "use strict";
+
+  const V400 = global.V400 = global.V400 || {};
+
+  const Visual = {
+    /* ---------------------------------------------------------
+       1. DRAW RADAR CHART
+       canvasId: "canvas_xxx"
+       data: {
+         home: {attack, defense, chain, build, progress, creation, conversion, protection}
+         away: { ... }
+       }
+    --------------------------------------------------------- */
+    renderRadar: function(canvasId, data){
+      const c = document.getElementById(canvasId);
+      if(!c) return;
+      const ctx = c.getContext("2d");
+      const W = c.width;
+      const H = c.height;
+      const CX = W/2;
+      const CY = H/2;
+      const R  = Math.min(W,H)/2 * 0.75;
+
+      // bersihkan
+      ctx.clearRect(0,0,W,H);
+      ctx.lineWidth = 1.2;
+      ctx.strokeStyle = "#555";
+
+      const labels = [
+        "Attack","Defense","Chain","Build","Progress",
+        "Creation","Conversion","Protection"
+      ];
+
+      const homeVals = [
+        data.home.attack,
+        data.home.defense,
+        data.home.chain,
+        data.home.build,
+        data.home.progress,
+        data.home.creation,
+        data.home.conversion,
+        data.home.protection
+      ];
+
+      const awayVals = [
+        data.away.attack,
+        data.away.defense,
+        data.away.chain,
+        data.away.build,
+        data.away.progress,
+        data.away.creation,
+        data.away.conversion,
+        data.away.protection
+      ];
+
+      const numAxis = labels.length;
+
+      function drawPolygon(values, color, alpha){
+        ctx.beginPath();
+        for(let i=0;i<numAxis;i++){
+          const ang = (Math.PI*2/numAxis)*i - Math.PI/2;
+          const r   = R * values[i];
+          const x   = CX + r*Math.cos(ang);
+          const y   = CY + r*Math.sin(ang);
+          if(i===0) ctx.moveTo(x,y);
+          else      ctx.lineTo(x,y);
+        }
+        ctx.closePath();
+
+        ctx.strokeStyle = color;
+        ctx.globalAlpha = 1;
+        ctx.stroke();
+
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = color;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+
+      // grid
+      ctx.strokeStyle = "#aaa";
+      ctx.globalAlpha = 0.4;
+      for(let k=1;k<=5;k++){
+        const r = (R/5)*k;
+        ctx.beginPath();
+        for(let i=0;i<numAxis;i++){
+          const ang = (Math.PI*2/numAxis)*i - Math.PI/2;
+          const x   = CX + r*Math.cos(ang);
+          const y   = CY + r*Math.sin(ang);
+          if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+        }
+        ctx.closePath();
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+
+      // axis lines + label
+      ctx.fillStyle = "#000";
+      ctx.font = "11px sans-serif";
+      for(let i=0;i<numAxis;i++){
+        const ang = (Math.PI*2/numAxis)*i - Math.PI/2;
+        const x   = CX + R*Math.cos(ang);
+        const y   = CY + R*Math.sin(ang);
+
+        ctx.beginPath();
+        ctx.moveTo(CX,CY);
+        ctx.lineTo(x,y);
+        ctx.strokeStyle="#999";
+        ctx.stroke();
+
+        ctx.fillText(labels[i], x-18, y-4);
+      }
+
+      // draw home radar (biru)
+      drawPolygon(homeVals, "#3b82f6", 0.20);
+      // draw away radar (merah)
+      drawPolygon(awayVals, "#ef4444", 0.20);
+    },
+
+    /* ---------------------------------------------------------
+       2. BALANCE BAR
+       Menunjukkan keseimbangan Attack & Defense
+       data: {
+         attack_home, attack_away,
+         defense_home, defense_away
+       }
+    --------------------------------------------------------- */
+    renderBalance: function(canvasId, data){
+      const c = document.getElementById(canvasId);
+      if(!c) return;
+      const ctx = c.getContext("2d");
+      const W = c.width;
+      const H = c.height;
+
+      ctx.clearRect(0,0,W,H);
+
+      // bar background
+      ctx.fillStyle = "#ddd";
+      ctx.fillRect(0, H/2 - 7, W, 14);
+
+      // home attack bar (left)
+      const mid = W/2;
+      ctx.fillStyle = "#3b82f6";
+      ctx.fillRect(mid - data.attack_home*mid, H/2 - 7, data.attack_home*mid, 14);
+
+      // away attack bar (right)
+      ctx.fillStyle = "#ef4444";
+      ctx.fillRect(mid, H/2 - 7, data.attack_away*mid, 14);
+
+      // defense overlay line
+      ctx.strokeStyle = "#0f172a";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(mid - data.defense_home*mid, H/2);
+      ctx.lineTo(mid + data.defense_away*mid, H/2);
+      ctx.stroke();
+
+      // labels
+      ctx.font = "12px sans-serif";
+      ctx.fillStyle = "#000";
+      ctx.fillText("HOME", 10, 15);
+      ctx.fillText("AWAY", W-45, 15);
+    }
+  };
+
+  V400.Visual = Visual;
+
+})(window);
+</script>
+<!-- ===========================================================
+     v400 PART 10 — UI BINDING & PIPELINE
+     • Tombol ANALYZE v400 → jalankan seluruh engine
+     • Tombol CLEAR → reset input & output
+=========================================================== -->
+<script>
+(function(global){
+  "use strict";
+
+  const V400 = global.V400 || {};
+
+  function byId(id){ return document.getElementById(id); }
+
+  /* ---------------------------------------------------------
+     Buat container visual (radar + balance) jika belum ada
+  --------------------------------------------------------- */
+  function ensureVisualArea(){
+    const box = byId("result_panel");
+    if(!box) return;
+
+    if(document.getElementById("v400_visual_wrap")) return;
+
+    const wrap = document.createElement("div");
+    wrap.id = "v400_visual_wrap";
+    wrap.style.marginTop = "10px";
+
+    const title = document.createElement("div");
+    title.textContent = "Visual v400 (Attack/Defense Radar & Balance)";
+    title.style.fontSize = "11px";
+    title.style.opacity = "0.8";
+    title.style.marginBottom = "4px";
+    wrap.appendChild(title);
+
+    const radar = document.createElement("canvas");
+    radar.id = "v400_radar";
+    radar.width  = 260;
+    radar.height = 200;
+    radar.style.background = "#e5e7eb";
+    radar.style.borderRadius = "8px";
+    radar.style.marginRight = "6px";
+
+    const balance = document.createElement("canvas");
+    balance.id = "v400_balance";
+    balance.width  = 260;
+    balance.height = 60;
+    balance.style.background = "#e5e7eb";
+    balance.style.borderRadius = "8px";
+    balance.style.marginTop = "6px";
+
+    wrap.appendChild(radar);
+    wrap.appendChild(document.createElement("br"));
+    wrap.appendChild(balance);
+
+    box.parentNode.insertBefore(wrap, box.nextSibling);
+  }
+
+  /* ---------------------------------------------------------
+     Ambil input match & tim dari form
+  --------------------------------------------------------- */
+  function collectMatchInput(){
+    return {
+      title : (byId("m_title")  || {}).value || "",
+      date  : (byId("m_date")   || {}).value || "",
+      time  : (byId("m_time")   || {}).value || "",
+      league: (byId("m_league") || {}).value || ""
+    };
+  }
+
+  function collectContextRaw(){
+    return {
+      league : (byId("m_league")  || {}).value || "",
+      mode   : (byId("m_mode")    || {}).value || "",
+      weather: (byId("m_weather") || {}).value || "",
+      pitch  : (byId("m_pitch")   || {}).value || "",
+      h2h    : (byId("m_h2h")     || {}).value || "",
+      note   : (byId("m_note")    || {}).value || "",
+      ref    : (byId("m_ref")     || {}).value || "",
+      extra  : (byId("m_extra")   || {}).value || ""
+    };
+  }
+
+  function collectHomeRaw(){
+    return {
+      name     : (byId("h_name")      || {}).value || "",
+      gpg      : (byId("h_gpg")       || {}).value,
+      gc       : (byId("h_gc")        || {}).value,
+      shots    : (byId("h_shots")     || {}).value,
+      shc      : (byId("h_shc")       || {}).value,
+      form_raw : (byId("h_form_raw")  || {}).value || "",
+      quality  : (byId("h_quality")   || {}).value,
+      stab     : (byId("h_stab")      || {}).value,
+      abs      : (byId("h_abs")       || {}).value || ""
+    };
+  }
+
+  function collectAwayRaw(){
+    return {
+      name     : (byId("a_name")      || {}).value || "",
+      gpg      : (byId("a_gpg")       || {}).value,
+      gc       : (byId("a_gc")        || {}).value,
+      shots    : (byId("a_shots")     || {}).value,
+      shc      : (byId("a_shc")       || {}).value,
+      form_raw : (byId("a_form_raw")  || {}).value || "",
+      quality  : (byId("a_quality")   || {}).value,
+      stab     : (byId("a_stab")      || {}).value,
+      abs      : (byId("a_abs")       || {}).value || ""
+    };
+  }
+
+  /* ---------------------------------------------------------
+     Render visual dari hasil Omega
+  --------------------------------------------------------- */
+  function renderVisual(omega){
+    if(!V400.Visual) return;
+
+    ensureVisualArea();
+
+    const homePh = omega.phase.H;
+    const awayPh = omega.phase.A;
+
+    const radarData = {
+      home:{
+        attack    : omega.attack.H,
+        defense   : omega.defense.H,
+        chain     : omega.chain.H,
+        build     : homePh.build,
+        progress  : homePh.progress,
+        creation  : homePh.creation,
+        conversion: homePh.conversion,
+        protection: homePh.protection
+      },
+      away:{
+        attack    : omega.attack.A,
+        defense   : omega.defense.A,
+        chain     : omega.chain.A,
+        build     : awayPh.build,
+        progress  : awayPh.progress,
+        creation  : awayPh.creation,
+        conversion: awayPh.conversion,
+        protection: awayPh.protection
+      }
+    };
+
+    const balanceData = {
+      attack_home : omega.attack.H,
+      attack_away : omega.attack.A,
+      defense_home: omega.defense.H,
+      defense_away: omega.defense.A
+    };
+
+    V400.Visual.renderRadar("v400_radar", radarData);
+    V400.Visual.renderBalance("v400_balance", balanceData);
+  }
+
+  /* ---------------------------------------------------------
+     Tombol CLEAR: reset form + hasil
+  --------------------------------------------------------- */
+  function clearAll(){
+    const ids = [
+      "m_title","m_date","m_time","m_league","m_mode","m_weather",
+      "m_pitch","m_note","m_h2h","m_ref","m_extra",
+      "h_name","h_gpg","h_gc","h_shots","h_shc","h_form_raw",
+      "h_quality","h_stab","h_abs",
+      "a_name","a_gpg","a_gc","a_shots","a_shc","a_form_raw",
+      "a_quality","a_stab","a_abs"
+    ];
+    ids.forEach(id=>{
+      const el = byId(id);
+      if(!el) return;
+      if(el.tagName === "SELECT"){
+        el.selectedIndex = 0;
+      } else {
+        el.value = "";
+      }
+    });
+
+    const rp = byId("result_panel");
+    if(rp){
+      rp.textContent = "Engine v400 siap.  \nIsi data minimal di atas, lalu tekan \"ANALYZE v400\".";
+    }
+
+    const radar = byId("v400_radar");
+    if(radar){
+      const ctx = radar.getContext("2d");
+      ctx.clearRect(0,0,radar.width,radar.height);
+    }
+    const bal = byId("v400_balance");
+    if(bal){
+      const ctx = bal.getContext("2d");
+      ctx.clearRect(0,0,bal.width,bal.height);
+    }
+  }
+
+  /* ---------------------------------------------------------
+     PIPELINE ANALYZE v400
+  --------------------------------------------------------- */
+  function runAnalyze(){
+    const resultPanel = byId("result_panel");
+    if(resultPanel){
+      resultPanel.textContent = "Memproses v400 engine...\n";
+    }
+
+    try{
+      const match   = collectMatchInput();
+      const ctxRaw  = collectContextRaw();
+      const homeRaw = collectHomeRaw();
+      const awayRaw = collectAwayRaw();
+
+      // 1) Auto stats tim
+      const home = V400.AutoTeam(homeRaw);
+      const away = V400.AutoTeam(awayRaw);
+
+      // 2) Context
+      const context = V400.Context(ctxRaw);
+
+      // 3) Omega
+      const omega = V400.Omega({home,away});
+
+      // 4) Tactical
+      const tactical = V400.Tactical({home,away,omega,ctx:context});
+
+      // 5) Simulation
+      const sim = V400.Sim({omega,context});
+
+      // 6) Report
+      const report = V400.Report({
+        match,
+        home,
+        away,
+        ctxRaw,
+        context,
+        omega,
+        tactical,
+        sim
+      });
+
+      // 7) Tampilkan teks
+      if(resultPanel){
+        resultPanel.textContent = report.text;
+      }
+
+      // 8) Visual
+      renderVisual(omega);
+
+    } catch(e){
+      console.error("v400 error:", e);
+      if(resultPanel){
+        resultPanel.textContent =
+          "Terjadi error di engine v400:\n" +
+          (e && e.message ? e.message : String(e)) +
+          "\n\nPeriksa kembali input, lalu coba lagi.";
+      }
+    }
+  }
+
+  /* ---------------------------------------------------------
+     Inisialisasi event listener
+  --------------------------------------------------------- */
+  function initV400Bindings(){
+    const btnAnalyze = byId("btn_analyze_v400");
+    const btnClear   = byId("btn_clear_v400");
+
+    if(btnAnalyze){
+      btnAnalyze.addEventListener("click", function(ev){
+        ev.preventDefault();
+        runAnalyze();
+      });
+    }
+    if(btnClear){
+      btnClear.addEventListener("click", function(ev){
+        ev.preventDefault();
+        clearAll();
+      });
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", initV400Bindings);
+})(window);
+</script>
+</body>
+</html>

@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Match Prediction v500 Ultra Neutral</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+    :root {
+        --bg: #ffffff;
+        --text: #000000;
+        --card: #f2f2f2;
+        --border: #dcdcdc;
+    }
+    [data-theme="dark"] {
+        --bg: #0e0e0e;
+        --text: #ffffff;
+        --card: #1d1d1d;
+        --border: #3a3a3a;
+    }
+
+    body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+    }
+
+    .container {
+        width: 96%;
+        max-width: 1200px;
+        margin: auto;
+        padding-top: 20px;
+        padding-bottom: 40px;
+    }
+
+    .section {
+        background: var(--card);
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        border: 1px solid var(--border);
+    }
+
+    label {
+        font-weight: bold;
+    }
+
+    input, select, textarea {
+        width: 100%;
+        padding: 8px;
+        margin-top: 6px;
+        margin-bottom: 15px;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+        background: var(--bg);
+        color: var(--text);
+    }
+
+    button {
+        padding: 10px 18px;
+        background: #446bff;
+        border: none;
+        border-radius: 6px;
+        color: white;
+        cursor: pointer;
+        font-weight: bold;
+    }
+
+    button:hover {
+        opacity: 0.85;
+    }
+
+    .title {
+        font-size: 22px;
+        font-weight: bold;
+        margin-bottom: 12px;
+    }
+
+    .toggle-box {
+        position: fixed;
+        top: 12px;
+        right: 20px;
+        background: var(--card);
+        padding: 10px 15px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        font-size: 14px;
+    }
+</style>
+
+<script>
+// ============================
+// AUTO DARK/LIGHT MODE v500
+// ============================
+function autoTheme() {
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    document.documentElement.setAttribute("data-theme", prefersDark ? "dark" : "light");
+}
+window.onload = autoTheme;
+</script>
+</head>
+
+<body>
+<div class="toggle-box">Auto: Light/Dark</div>
+
+<div class="container">
+<div class="section">
+    <div class="title">Match Prediction Engine v500 (Ultra Neutral Final Core)</div>
+    <p>Akurasi tinggi • Tidak condong • Menggunakan xG/xGA • Absence Analyzer • H2H Auto • Neutrality Engine</p>
+</div>
+<div class="section">
+    <div class="title">Context Pertandingan</div>
+
+    <label>Judul Pertandingan</label>
+    <input id="m_title" type="text" placeholder="">
+
+    <label>Liga / Kompetisi</label>
+    <input id="m_league" type="text" placeholder="">
+
+    <label>Tanggal (opsional)</label>
+    <input id="m_date" type="text" placeholder="">
+
+    <label>Jam Kick-off (opsional)</label>
+    <input id="m_time" type="text" placeholder="">
+
+    <label>Mode Laga</label>
+    <select id="m_mode">
+        <option value="">League (default)</option>
+        <option value="cup">Cup / Knockout</option>
+        <option value="derby">Derby</option>
+        <option value="final">Final</option>
+        <option value="title">Title Race</option>
+        <option value="relegation">Zona Degradasi</option>
+        <option value="intl">Antar Negara</option>
+        <option value="friendly">Friendly</option>
+    </select>
+
+    <label>Perkiraan Cuaca</label>
+    <select id="m_weather">
+        <option value="">Normal / Clear</option>
+        <option value="rain">Hujan</option>
+        <option value="heavy_rain">Hujan Deras</option>
+        <option value="cold">Dingin</option>
+        <option value="hot">Panas</option>
+        <option value="windy">Berangin</option>
+    </select>
+
+    <label>Kondisi Lapangan</label>
+    <select id="m_pitch">
+        <option value="">Normal / Baik</option>
+        <option value="wet">Basah</option>
+        <option value="heavy">Berat / Rusak</option>
+    </select>
+
+    <label>Importance Override (1–10, boleh kosong)</label>
+    <input id="m_importance" type="number" min="1" max="10" step="0.1" placeholder="">
+
+    <label>Wasit (opsional)</label>
+    <input id="m_ref" type="text" placeholder="">
+
+    <label>Catatan Context (opsional)</label>
+    <input id="m_note" type="text" placeholder="">
+</div>
+
+<div class="section">
+    <div class="title">H2H (Head-to-Head)</div>
+    <p>Masukkan skor H2H sesuai pertandingan. Satu baris satu skor, format <b>Home-Away</b>, contoh pengisian saat ANALISIS (bukan di script): 2-1, 3-0, 1-1. Script hanya akan membaca angka yang Anda isi.</p>
+
+    <label>H2H Skor (satu baris satu skor)</label>
+    <textarea id="h2h_input" rows="4" placeholder=""></textarea>
+
+    <button type="button" id="btn_h2h_parse">Proses H2H</button>
+    <div id="h2h_result" style="margin-top:8px;font-size:13px;"></div>
+</div>
+
+<div class="section">
+    <div class="title">Statistik Tim & Absensi</div>
+
+    <div style="display:flex;flex-wrap:wrap;gap:16px;">
+        <!-- HOME -->
+        <div style="flex:1 1 260px;min-width:240px;">
+            <h3>Home</h3>
+
+            <label>Nama Tim</label>
+            <input id="h_name" type="text" placeholder="">
+
+            <label>Gol per Laga (GPG)</label>
+            <input id="h_gpg" type="number" step="0.01" min="0" placeholder="">
+
+            <label>Gol Kebobolan per Laga (GC)</label>
+            <input id="h_gc" type="number" step="0.01" min="0" placeholder="">
+
+            <label>xG For per Laga</label>
+            <input id="h_xg" type="number" step="0.01" min="0" placeholder="">
+
+            <label>xGA (Expected Goals Against) per Laga</label>
+            <input id="h_xga" type="number" step="0.01" min="0" placeholder="">
+
+            <label>Form (opsional, misal WWDLW)</label>
+            <input id="h_form" type="text" placeholder="">
+
+            <label>Quality Rating (1–10)</label>
+            <input id="h_quality" type="number" step="0.1" min="1" max="10" placeholder="">
+
+            <label>Stability Rating (1–10)</label>
+            <input id="h_stab" type="number" step="0.1" min="1" max="10" placeholder="">
+        </div>
+
+        <!-- AWAY -->
+        <div style="flex:1 1 260px;min-width:240px;">
+            <h3>Away</h3>
+
+            <label>Nama Tim</label>
+            <input id="a_name" type="text" placeholder="">
+
+            <label>Gol per Laga (GPG)</label>
+            <input id="a_gpg" type="number" step="0.01" min="0" placeholder="">
+
+            <label>Gol Kebobolan per Laga (GC)</label>
+            <input id="a_gc" type="number" step="0.01" min="0" placeholder="">
+
+            <label>xG For per Laga</label>
+            <input id="a_xg" type="number" step="0.01" min="0" placeholder="">
+
+            <label>xGA (Expected Goals Against) per Laga</label>
+            <input id="a_xga" type="number" step="0.01" min="0" placeholder="">
+
+            <label>Form (opsional, misal LWDWW)</label>
+            <input id="a_form" type="text" placeholder="">
+
+            <label>Quality Rating (1–10)</label>
+            <input id="a_quality" type="number" step="0.1" min="1" max="10" placeholder="">
+
+            <label>Stability Rating (1–10)</label>
+            <input id="a_stab" type="number" step="0.1" min="1" max="10" placeholder="">
+        </div>
+
+        <!-- ABSENCE -->
+        <div style="flex:1 1 260px;min-width:240px;">
+            <h3>Absensi Pemain (cedera/suspend)</h3>
+            <p style="font-size:13px;margin-top:0;">Isi jumlah pemain yang tidak bisa main. Jika tidak tahu, isi 0.</p>
+
+            <label>Home – GK absen</label>
+            <input id="h_abs_gk" type="number" min="0" max="3" step="1" placeholder="">
+
+            <label>Home – DF absen</label>
+            <input id="h_abs_df" type="number" min="0" max="8" step="1" placeholder="">
+
+            <label>Home – MD absen</label>
+            <input id="h_abs_md" type="number" min="0" max="8" step="1" placeholder="">
+
+            <label>Home – FW absen</label>
+            <input id="h_abs_fw" type="number" min="0" max="8" step="1" placeholder="">
+
+            <hr style="margin:10px 0;border:0;border-top:1px solid var(--border);">
+
+            <label>Away – GK absen</label>
+            <input id="a_abs_gk" type="number" min="0" max="3" step="1" placeholder="">
+
+            <label>Away – DF absen</label>
+            <input id="a_abs_df" type="number" min="0" max="8" step="1" placeholder="">
+
+            <label>Away – MD absen</label>
+            <input id="a_abs_md" type="number" min="0" max="8" step="1" placeholder="">
+
+            <label>Away – FW absen</label>
+            <input id="a_abs_fw" type="number" min="0" max="8" step="1" placeholder="">
+        </div>
+    </div>
+</div>
+<div class="section">
+    <div class="title">Hasil Analisis v500 (Ultra Neutral)</div>
+    <p>Model ini hanya menghitung probabilitas berbasis statistik yang Anda isi. Tidak memakai odds dan tidak diarahkan condong ke Home/Away maupun Over/Under.</p>
+
+    <button type="button" id="btn_analyze">ANALYZE v500</button>
+    <button type="button" id="btn_clear" style="margin-left:8px;background:#777;">CLEAR</button>
+
+    <pre id="result_panel" style="margin-top:15px; padding:10px; background:var(--bg); border-radius:6px; border:1px solid var(--border); min-height:200px; white-space:pre-wrap;">
+Belum ada analisis.
+Isi statistik tim, H2H (opsional), context, lalu klik ANALYZE v500.
+    </pre>
+
+    <div style="display:flex;flex-wrap:wrap;gap:16px;margin-top:14px;">
+        <canvas id="v500_radar" width="280" height="220" style="flex:1 1 260px;min-width:240px;"></canvas>
+        <canvas id="v500_balance" width="280" height="80" style="flex:1 1 260px;min-width:240px;"></canvas>
+    </div>
+
+    <p style="font-size:12px;margin-top:10px;color:#777;">
+        Catatan: semua output murni berasal dari input Anda. Tidak ada contoh nilai, tidak ada data klub bawaan, dan tidak ada pemaksaan hasil ke salah satu sisi.
+    </p>
+</div>
+</div> <!-- /container -->
+
+<script>
+// =====================================
+// v500 CORE ENGINE (Ultra Neutral)
+// =====================================
+const V500 = {};
+
+// Helper
+V500.num = function(v){
+    const n = parseFloat(v);
+    return isNaN(n) ? 0 : n;
+};
+
+V500.clamp = function(v,min,max){
+    return Math.min(max, Math.max(min, v));
+};
+
+V500.safeStr = function(v){
+    return (v === undefined || v === null) ? "" : String(v);
+};
+
+V500.poisson = function(lambda,k){
+    lambda = Math.max(lambda,0);
+    if(k<0) return 0;
+    let res = Math.exp(-lambda);
+    for(let i=1;i<=k;i++){
+        res *= lambda / i;
+    }
+    return res;
+};
+
+// =====================================
+// H2H Parser (format: 2-1, 3-0, dll.)
+// =====================================
+V500.parseH2H = function(raw){
+    const text = V500.safeStr(raw).trim();
+    if(!text){
+        return {
+            homeAvg: 0,
+            awayAvg: 0,
+            totalAvg: 0,
+            n: 0,
+            trend: "NETRAL"
+        };
+    }
+    const lines = text.split(/\n+/);
+    let H = 0, A = 0, n = 0;
+    for(const lineRaw of lines){
+        const line = lineRaw.replace(/\s+/g,"");
+        if(!line) continue;
+        const parts = line.split("-");
+        if(parts.length !== 2) continue;
+        const h = V500.num(parts[0]);
+        const a = V500.num(parts[1]);
+        if(isNaN(h) || isNaN(a)) continue;
+        H += h; A += a; n++;
+    }
+    if(n === 0){
+        return {
+            homeAvg: 0,
+            awayAvg: 0,
+            totalAvg: 0,
+            n: 0,
+            trend: "NETRAL"
+        };
+    }
+    const homeAvg = H / n;
+    const awayAvg = A / n;
+    const totalAvg = homeAvg + awayAvg;
+
+    let trend = "NETRAL";
+    if(totalAvg >= 3.2) trend = "CENDERUNG OVER (historis)";
+    else if(totalAvg <= 2.0) trend = "CENDERUNG UNDER (historis)";
+
+    return { homeAvg, awayAvg, totalAvg, n, trend };
+};
+
+// =====================================
+// Absence Analyzer (GK / DF / MD / FW)
+// =====================================
+V500.absenceImpact = function(gk,df,md,fw){
+    gk = V500.clamp(V500.num(gk),0,3);
+    df = V500.clamp(V500.num(df),0,8);
+    md = V500.clamp(V500.num(md),0,8);
+    fw = V500.clamp(V500.num(fw),0,8);
+
+    const score =
+        gk*3.0 +
+        df*1.4 +
+        md*1.2 +
+        fw*1.5;
+
+    const severity = V500.clamp(score / 3.0, 0, 10);
+
+    const atkDrop = -0.02*(md+fw) - 0.04*fw;
+    const defDrop = -0.03*df - 0.05*gk;
+
+    return {
+        severity,
+        atkMult: 1 + V500.clamp(atkDrop, -0.35, 0),
+        defMult: 1 + V500.clamp(defDrop, -0.35, 0)
+    };
+};
+
+// =====================================
+// Team Engine (GPG,GC,xG,xGA,Quality,Stab)
+// =====================================
+V500.buildTeam = function(raw, abs){
+    const gpg     = V500.num(raw.gpg);
+    const gc      = V500.num(raw.gc);
+    const xg      = V500.num(raw.xg);
+    const xga     = V500.num(raw.xga);
+    const quality = V500.clamp(V500.num(raw.quality),1,10);
+    const stab    = V500.clamp(V500.num(raw.stab),1,10);
+
+    const atkBase =
+        (gpg * 0.4) +
+        (xg  * 0.6);
+
+    const defBase =
+        ((2.4 - gc) * 0.45) +
+        ((1.6 - xga) * 0.55);
+
+    let atk = V500.clamp(atkBase / 3.0, 0.05, 1.4);
+    let def = V500.clamp(defBase / 3.0, 0.05, 1.4);
+
+    const qa = (quality - 5) / 20;
+    const sa = (stab    - 5) / 25;
+    atk *= (1 + qa + sa*0.5);
+    def *= (1 + sa + qa*0.3);
+
+    atk *= abs.atkMult;
+    def *= abs.defMult;
+
+    atk = V500.clamp(atk,0.1,2.0);
+    def = V500.clamp(def,0.1,2.0);
+
+    return {
+        gpg, gc, xg, xga,
+        quality,
+        stability: stab,
+        attackIdx : atk,
+        defenseIdx: def,
+        absence   : abs
+    };
+};
+
+// =====================================
+// Context Engine (Mode, Cuaca, Lapangan)
+// =====================================
+V500.buildContext = function(raw, h2h){
+    const mode    = V500.safeStr(raw.mode).toLowerCase();
+    const weather = V500.safeStr(raw.weather).toLowerCase();
+    const pitch   = V500.safeStr(raw.pitch).toLowerCase();
+    const impRaw  = V500.num(raw.importanceOverride);
+
+    let importance = 5;
+    let neutralSite= false;
+
+    if(mode === "cup") importance = 7;
+    else if(mode === "derby") importance = 8.5;
+    else if(mode === "final"){ importance = 9.5; neutralSite = true; }
+    else if(mode === "title") importance = 9;
+    else if(mode === "relegation") importance = 8.5;
+    else if(mode === "intl") importance = 7.5;
+    else if(mode === "friendly") importance = 4.5;
+
+    if(impRaw > 0){
+        importance = V500.clamp(impRaw,1,10);
+    }
+
+    let tempo = 6;
+    if(weather === "rain") tempo -= 0.3;
+    else if(weather === "heavy_rain") tempo -= 0.7;
+    else if(weather === "cold") tempo -= 0.2;
+    else if(weather === "hot") tempo -= 0.2;
+    else if(weather === "windy") tempo -= 0.1;
+
+    if(pitch === "wet") tempo -= 0.3;
+    else if(pitch === "heavy") tempo -= 0.6;
+
+    let chaos = 5;
+    if(mode === "derby") chaos += 1;
+    if(mode === "final") chaos += 0.7;
+    if(mode === "relegation") chaos += 0.7;
+
+    if(h2h && h2h.n > 0){
+        if(h2h.totalAvg >= 3) chaos += 0.3;
+        else if(h2h.totalAvg <= 2) chaos -= 0.3;
+    }
+
+    tempo = V500.clamp(tempo,3,9);
+    chaos = V500.clamp(chaos,3,9);
+
+    const homeAdv = neutralSite ? 0.05 : 0.30;
+
+    return {
+        tempo,
+        chaos,
+        importance,
+        homeAdv,
+        neutralSite
+    };
+};
+
+// =====================================
+// Lambda Engine (xG final untuk Poisson) + Anti-Bias
+// =====================================
+V500.buildLambda = function(homeTeam, awayTeam, ctx, h2h){
+    const baseHome =
+        homeTeam.gpg * 0.4 +
+        homeTeam.xg  * 0.6;
+    const baseAway =
+        awayTeam.gpg * 0.4 +
+        awayTeam.xg  * 0.6;
+
+    let lamH = baseHome * (homeTeam.attackIdx / 1.0) * (awayTeam.defenseIdx / 1.0);
+    let lamA = baseAway * (awayTeam.attackIdx / 1.0) * (homeTeam.defenseIdx / 1.0);
+
+    if(h2h && h2h.n > 0){
+        const hFactor = 1 + V500.clamp((h2h.homeAvg - 1.5)*0.06, -0.15, 0.15);
+        const aFactor = 1 + V500.clamp((h2h.awayAvg - 1.2)*0.06, -0.15, 0.15);
+        lamH *= hFactor;
+        lamA *= aFactor;
+    }
+
+    const tempoFactor = 1 + (ctx.tempo - 6) * 0.03;
+    const chaosFactor = 1 + (ctx.chaos - 5) * 0.04;
+    lamH *= tempoFactor * chaosFactor;
+    lamA *= tempoFactor * chaosFactor;
+
+    lamH *= (1 + ctx.homeAdv * 0.25);
+    lamA *= (1 - ctx.homeAdv * 0.10);
+
+    lamH = V500.clamp(lamH,0.2,3.5);
+    lamA = V500.clamp(lamA,0.2,3.5);
+
+    const avgLam = (lamH + lamA)/2;
+    const diff   = lamH - lamA;
+    const compressedDiff = diff * 0.65;
+    lamH = avgLam + compressedDiff/2;
+    lamA = avgLam - compressedDiff/2;
+
+    return { lamH, lamA };
+};
+
+// =====================================
+// Sim Engine (Poisson + Anti-Bias probabilitas)
+// =====================================
+V500.simulate = function(lambda){
+    const maxG = 5;
+    const lamH = lambda.lamH;
+    const lamA = lambda.lamA;
+
+    let pH=0,pD=0,pA=0;
+    let ou25O=0,ou25U=0,ou35O=0,ou35U=0;
+
+    for(let h=0;h<=maxG;h++){
+        const pPH = V500.poisson(lamH,h);
+        for(let a=0;a<=maxG;a++){
+            const pPA = V500.poisson(lamA,a);
+            const p = pPH * pPA;
+
+            if(h>a) pH += p;
+            else if(h===a) pD += p;
+            else pA += p;
+
+            const sum = h+a;
+            if(sum>2) ou25O += p; else ou25U += p;
+            if(sum>3) ou35O += p; else ou35U += p;
+        }
+    }
+
+    const tot = pH+pD+pA;
+    if(tot>0){
+        pH/=tot; pD/=tot; pA/=tot;
+    }
+
+    function compressProb(x){
+        const center = 1/3;
+        return center + (x-center)*0.75;
+    }
+    const pHc = compressProb(pH);
+    const pDc = compressProb(pD);
+    const pAc = compressProb(pA);
+    const norm= pHc+pDc+pAc;
+    const pHf = pHc/norm, pDf=pDc/norm, pAf=pAc/norm;
+
+    return {
+        lambda,
+        main:{
+            pH:pHf,
+            pD:pDf,
+            pA:pAf,
+            ou25_over: ou25O,
+            ou25_under: ou25U,
+            ou35_over: ou35O,
+            ou35_under: ou35U
+        }
+    };
+};
+
+// =====================================
+// Report (teks, netral, tanpa saran sisi)
+// =====================================
+V500.report = function(input, homeTeam, awayTeam, ctx, h2h, sim){
+    const title  = V500.safeStr(input.title) || "Match";
+    const league = V500.safeStr(input.league);
+    const date   = V500.safeStr(input.date);
+    const time   = V500.safeStr(input.time);
+
+    const hName  = V500.safeStr(input.hName) || "Home";
+    const aName  = V500.safeStr(input.aName) || "Away";
+
+    function pct(x){ return (x*100).toFixed(1)+"%"; }
+    function f1(x){ return V500.num(x).toFixed(1); }
+    function f2(x){ return V500.num(x).toFixed(2); }
+
+    const m = sim.main;
+    const lines = [];
+
+    lines.push("=== "+title+" ===");
+    if(league || date || time){
+        let tmp=[];
+        if(league) tmp.push("Kompetisi: "+league);
+        if(date)   tmp.push("Tanggal: "+date);
+        if(time)   tmp.push("Kick-off: "+time);
+        lines.push(tmp.join(" · "));
+    }
+    lines.push("Mode: "+(input.mode||"League")+
+               " · Cuaca: "+(input.weather||"Normal")+
+               " · Lapangan: "+(input.pitch||"Baik"));
+
+    lines.push("");
+    lines.push("--- Profil Tim (berdasarkan input Anda) ---");
+    lines.push(hName+" → GPG: "+f2(homeTeam.gpg)+
+               " · GC: "+f2(homeTeam.gc)+
+               " · xG: "+f2(homeTeam.xg)+
+               " · xGA: "+f2(homeTeam.xga)+
+               " · Quality: "+f1(homeTeam.quality)+
+               " · Stability: "+f1(homeTeam.stability));
+    lines.push(aName+" → GPG: "+f2(awayTeam.gpg)+
+               " · GC: "+f2(awayTeam.gc)+
+               " · xG: "+f2(awayTeam.xg)+
+               " · xGA: "+f2(awayTeam.xga)+
+               " · Quality: "+f1(awayTeam.quality)+
+               " · Stability: "+f1(awayTeam.stability));
+
+    lines.push("");
+    lines.push("--- Absensi & Dampaknya (skala ringan) ---");
+    lines.push(hName+" → Severity: "+f1(homeTeam.absence.severity)+"/10");
+    lines.push(aName+" → Severity: "+f1(awayTeam.absence.severity)+"/10");
+
+    lines.push("");
+    lines.push("--- H2H (berdasarkan skor yang Anda isi) ---");
+    if(h2h.n===0){
+        lines.push("Tidak ada data H2H valid (boleh dikosongkan jika kedua tim jarang bertemu).");
+    } else {
+        lines.push("Sample laga: "+h2h.n+
+                   " · Rata-rata gol H2H → "+hName+": "+f2(h2h.homeAvg)+
+                   " / "+aName+": "+f2(h2h.awayAvg)+
+                   " · Total: "+f2(h2h.totalAvg));
+        lines.push("Pola historis (informasi saja, tidak memaksa model): "+h2h.trend);
+    }
+
+    lines.push("");
+    lines.push("--- Context Model (Tempo, Chaos, Importance) ---");
+    lines.push("Tempo: "+f1(ctx.tempo)+"/10"+
+               " · Chaos: "+f1(ctx.chaos)+"/10"+
+               " · Importance: "+f1(ctx.importance)+"/10"+
+               " · Home advantage (relatif): "+f2(ctx.homeAdv));
+
+    lines.push("");
+    lines.push("--- Distribusi Hasil (netral, tanpa saran sisi) ---");
+    lines.push("Probabilitas hasil (setelah anti-bias):");
+    lines.push("  "+hName+" menang : "+pct(m.pH));
+    lines.push("  Seri          : "+pct(m.pD));
+    lines.push("  "+aName+" menang : "+pct(m.pA));
+
+    lines.push("");
+    lines.push("--- Gambaran Total Gol (bukan ajakan memilih over/under) ---");
+    lines.push("Over 2.5 : "+pct(m.ou25_over)+
+               " · Under 2.5 : "+pct(m.ou25_under));
+    lines.push("Over 3.5 : "+pct(m.ou35_over)+
+               " · Under 3.5 : "+pct(m.ou35_under));
+
+    lines.push("");
+    lines.push("Catatan:");
+    lines.push("- Semua angka di atas adalah hasil perhitungan dari input Anda sendiri.");
+    lines.push("- Tidak ada odds, tidak ada contoh bawaan, dan model tidak diarahkan condong ke Home/Away ataupun Over/Under.");
+    lines.push("- Anti-bias engine menahan probabilitas agar tidak ekstrem tanpa dukungan data.");
+
+    return lines.join("\n");
+};
+
+// =====================================
+// Visual: Radar & Attack Balance
+// =====================================
+V500.renderRadar = function(canvasId, homeTeam, awayTeam){
+    const c = document.getElementById(canvasId);
+    if(!c) return;
+    const ctx = c.getContext("2d");
+    const W = c.width, H = c.height;
+    const CX = W/2, CY = H/2;
+    const R  = Math.min(W,H)*0.38;
+
+    ctx.clearRect(0,0,W,H);
+
+    const labels = ["Atk","Def","Qual","Stab"];
+    const valsH = [
+        V500.clamp(homeTeam.attackIdx/2.0,0,1),
+        V500.clamp(homeTeam.defenseIdx/2.0,0,1),
+        homeTeam.quality/10,
+        homeTeam.stability/10
+    ];
+    const valsA = [
+        V500.clamp(awayTeam.attackIdx/2.0,0,1),
+        V500.clamp(awayTeam.defenseIdx/2.0,0,1),
+        awayTeam.quality/10,
+        awayTeam.stability/10
+    ];
+    const axis = labels.length;
+
+    ctx.strokeStyle = "#999";
+    ctx.globalAlpha = 0.5;
+    for(let r=1;r<=4;r++){
+        const rr = (R/4)*r;
+        ctx.beginPath();
+        for(let i=0;i<axis;i++){
+            const ang = (Math.PI*2/axis)*i - Math.PI/2;
+            const x = CX + rr*Math.cos(ang);
+            const y = CY + rr*Math.sin(ang);
+            if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+        }
+        ctx.closePath();
+        ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+
+    ctx.font="10px Arial";
+    ctx.fillStyle="#888";
+    ctx.strokeStyle="#777";
+    for(let i=0;i<axis;i++){
+        const ang = (Math.PI*2/axis)*i - Math.PI/2;
+        const x = CX + R*Math.cos(ang);
+        const y = CY + R*Math.sin(ang);
+        ctx.beginPath();
+        ctx.moveTo(CX,CY);
+        ctx.lineTo(x,y);
+        ctx.stroke();
+        ctx.fillText(labels[i], x-10, y-4);
+    }
+
+    function draw(vals,color,alpha){
+        ctx.beginPath();
+        for(let i=0;i<axis;i++){
+            const ang = (Math.PI*2/axis)*i - Math.PI/2;
+            const r = R * vals[i];
+            const x = CX + r*Math.cos(ang);
+            const y = CY + r*Math.sin(ang);
+            if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+        }
+        ctx.closePath();
+        ctx.strokeStyle = color;
+        ctx.globalAlpha = 1;
+        ctx.stroke();
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = color;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+    }
+
+    draw(valsH,"#446bff",0.20);
+    draw(valsA,"#ff5555",0.20);
+};
+
+V500.renderBalance = function(canvasId, homeTeam, awayTeam){
+    const c = document.getElementById(canvasId);
+    if(!c) return;
+    const ctx = c.getContext("2d");
+    const W = c.width, H = c.height;
+    ctx.clearRect(0,0,W,H);
+
+    const mid = W/2;
+    ctx.fillStyle = "#999";
+    ctx.fillRect(0,H/2-6,W,12);
+
+    const atkH = V500.clamp(homeTeam.attackIdx/2.0,0,1);
+    const atkA = V500.clamp(awayTeam.attackIdx/2.0,0,1);
+
+    ctx.fillStyle="#446bff";
+    ctx.fillRect(mid - atkH*mid, H/2-6, atkH*mid, 12);
+    ctx.fillStyle="#ff5555";
+    ctx.fillRect(mid, H/2-6, atkA*mid, 12);
+
+    ctx.font="10px Arial";
+    ctx.fillStyle="#ddd";
+    ctx.fillText("HOME ATK", 6, 14);
+    ctx.fillText("AWAY ATK", W-60, 14);
+};
+
+// =====================================
+// UI Handler
+// =====================================
+function collectInputs(){
+    return {
+        title  : document.getElementById("m_title").value,
+        league : document.getElementById("m_league").value,
+        date   : document.getElementById("m_date").value,
+        time   : document.getElementById("m_time").value,
+        mode   : document.getElementById("m_mode").value,
+        weather: document.getElementById("m_weather").value,
+        pitch  : document.getElementById("m_pitch").value,
+        importanceOverride: document.getElementById("m_importance").value,
+        ref    : document.getElementById("m_ref").value,
+        note   : document.getElementById("m_note").value,
+
+        hName  : document.getElementById("h_name").value,
+        aName  : document.getElementById("a_name").value,
+
+        h_gpg  : document.getElementById("h_gpg").value,
+        h_gc   : document.getElementById("h_gc").value,
+        h_xg   : document.getElementById("h_xg").value,
+        h_xga  : document.getElementById("h_xga").value,
+        h_form : document.getElementById("h_form").value,
+        h_quality: document.getElementById("h_quality").value,
+        h_stab   : document.getElementById("h_stab").value,
+
+        a_gpg  : document.getElementById("a_gpg").value,
+        a_gc   : document.getElementById("a_gc").value,
+        a_xg   : document.getElementById("a_xg").value,
+        a_xga  : document.getElementById("a_xga").value,
+        a_form : document.getElementById("a_form").value,
+        a_quality: document.getElementById("a_quality").value,
+        a_stab   : document.getElementById("a_stab").value,
+
+        h_abs_gk: document.getElementById("h_abs_gk").value,
+        h_abs_df: document.getElementById("h_abs_df").value,
+        h_abs_md: document.getElementById("h_abs_md").value,
+        h_abs_fw: document.getElementById("h_abs_fw").value,
+
+        a_abs_gk: document.getElementById("a_abs_gk").value,
+        a_abs_df: document.getElementById("a_abs_df").value,
+        a_abs_md: document.getElementById("a_abs_md").value,
+        a_abs_fw: document.getElementById("a_abs_fw").value,
+
+        h2h_raw: document.getElementById("h2h_input").value
+    };
+}
+
+function runH2HParse(){
+    const raw = document.getElementById("h2h_input").value;
+    const res = V500.parseH2H(raw);
+    const el  = document.getElementById("h2h_result");
+    if(res.n === 0){
+        el.textContent = "H2H kosong atau format tidak terbaca. Tidak masalah jika kedua tim jarang bertemu.";
+        return;
+    }
+    el.textContent =
+        "Sample laga: "+res.n+
+        " · Home AVG: "+res.homeAvg.toFixed(2)+
+        " · Away AVG: "+res.awayAvg.toFixed(2)+
+        " · Total AVG: "+res.totalAvg.toFixed(2)+
+        " · Pola historis: "+res.trend;
+}
+
+function runAnalyze(){
+    const panel = document.getElementById("result_panel");
+    panel.textContent = "Memproses v500 Ultra Neutral...\n";
+
+    const inp = collectInputs();
+    const h2h = V500.parseH2H(inp.h2h_raw);
+
+    const absH = V500.absenceImpact(inp.h_abs_gk,inp.h_abs_df,inp.h_abs_md,inp.h_abs_fw);
+    const absA = V500.absenceImpact(inp.a_abs_gk,inp.a_abs_df,inp.a_abs_md,inp.a_abs_fw);
+
+    const homeTeam = V500.buildTeam({
+        gpg: inp.h_gpg,
+        gc : inp.h_gc,
+        xg : inp.h_xg,
+        xga: inp.h_xga,
+        quality: inp.h_quality,
+        stab   : inp.h_stab
+    }, absH);
+
+    const awayTeam = V500.buildTeam({
+        gpg: inp.a_gpg,
+        gc : inp.a_gc,
+        xg : inp.a_xg,
+        xga: inp.a_xga,
+        quality: inp.a_quality,
+        stab   : inp.a_stab
+    }, absA);
+
+    const ctx = V500.buildContext({
+
+        mode  : inp.mode,
+
+        weather: inp.weather,
+
+        pitch  : inp.pitch,
+
+        importanceOverride: inp.importanceOverride
+
+    }, h2h);
+
+
+
+    const lambda = V500.buildLambda(homeTeam,awayTeam,ctx,h2h);
+
+    const sim    = V500.simulate(lambda);
+
+
+
+    const report = V500.report({
+
+        title : inp.title,
+
+        league: inp.league,
+
+        date  : inp.date,
+
+        time  : inp.time,
+
+        mode  : inp.mode,
+
+        weather: inp.weather,
+
+        pitch  : inp.pitch,
+
+        hName : inp.hName,
+
+        aName : inp.aName
+
+    }, homeTeam, awayTeam, ctx, h2h, sim);
+
+
+
+    panel.textContent = report;
+
+
+
+    V500.renderRadar("v500_radar", homeTeam, awayTeam);
+
+    V500.renderBalance("v500_balance", homeTeam, awayTeam);
+
+}
+
+
+
+function clearAll(){
+
+    const ids = [
+
+        "m_title","m_league","m_date","m_time",
+
+        "m_importance","m_ref","m_note",
+
+        "h_name","h_gpg","h_gc","h_xg","h_xga","h_form","h_quality","h_stab",
+
+        "a_name","a_gpg","a_gc","a_xg","a_xga","a_form","a_quality","a_stab",
+
+        "h_abs_gk","h_abs_df","h_abs_md","h_abs_fw",
+
+        "a_abs_gk","a_abs_df","a_abs_md","a_abs_fw",
+
+        "h2h_input"
+
+    ];
+
+    ids.forEach(id=>{
+
+        const el = document.getElementById(id);
+
+        if(el) el.value = "";
+
+    });
+
+    document.getElementById("m_mode").value = "";
+
+    document.getElementById("m_weather").value = "";
+
+    document.getElementById("m_pitch").value = "";
+
+    document.getElementById("h2h_result").textContent = "";
+
+    document.getElementById("result_panel").textContent =
+
+        "Belum ada analisis.\nIsi statistik tim, H2H (opsional), context, lalu klik ANALYZE v500.";
+
+
+
+    const r = document.getElementById("v500_radar");
+
+    if(r) r.getContext("2d").clearRect(0,0,r.width,r.height);
+
+    const b = document.getElementById("v500_balance");
+
+    if(b) b.getContext("2d").clearRect(0,0,b.width,b.height);
+
+}
+
+
+
+document.addEventListener("DOMContentLoaded",()=>{
+
+    const btnH2H = document.getElementById("btn_h2h_parse");
+
+    const btnA   = document.getElementById("btn_analyze");
+
+    const btnC   = document.getElementById("btn_clear");
+
+    if(btnH2H) btnH2H.addEventListener("click", runH2HParse);
+
+    if(btnA)   btnA.addEventListener("click", runAnalyze);
+
+    if(btnC)   btnC.addEventListener("click", clearAll);
+
+});
+
+</script>
+
+</body>
+
+</html>
+

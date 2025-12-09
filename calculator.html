@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Kalkulator xG / xGA — Simple</title>
+<style>
+  body{font-family:Inter,Segoe UI,Arial,sans-serif;background:#0f1720;color:#e6eef6;padding:18px}
+  .card{background:#0b1220;border:1px solid #213045;padding:16px;border-radius:10px;max-width:980px;margin:0 auto}
+  h1{color:#7ce7ff;margin:0 0 12px;font-size:20px}
+  label{display:block;margin-top:10px;color:#bcd8ea}
+  textarea,input,select{width:100%;padding:8px;border-radius:6px;border:1px solid #213045;background:#07101a;color:#d8eef6;box-sizing:border-box}
+  table{width:100%;border-collapse:collapse;margin-top:8px}
+  th,td{padding:6px;border-bottom:1px dashed #213045;text-align:left;font-family:monospace}
+  button{margin-top:10px;padding:8px 12px;border-radius:8px;border:none;background:#12b8e3;color:#001;padding-left:14px;cursor:pointer;font-weight:700}
+  .row-actions{display:flex;gap:6px}
+  .muted{color:#8aa7bd;font-size:13px}
+  .grid{display:grid;grid-template-columns:1fr 220px;gap:12px;align-items:start}
+  .small{font-size:13px;color:#a9c6d7}
+  .result{background:#061020;border:1px solid #173047;padding:10px;border-radius:8px;margin-top:10px}
+  .stat{display:flex;gap:8px;flex-wrap:wrap}
+  .stat > div{background:#071826;padding:8px;border-radius:6px;border:1px solid #133248;min-width:140px}
+  .hint{font-size:13px;color:#8fb0c8;margin-top:8px}
+  .controls{display:flex;gap:8px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>Kalkulator xG / xGA</h1>
+  <div class="muted">Masukkan nilai xG atau xGA per pertandingan — dapat diisi manual atau paste daftar (CSV/newline/spasi).</div>
+
+  <label>Import cepat (paste angka & tekan "Parse")</label>
+  <textarea id="pasteArea" rows="3" placeholder="Contoh: 1.20, 0.85, 1.05  atau  1.2\n0.8\n1.05"></textarea>
+  <div class="controls">
+    <button id="btnParse">Parse & Tambah ke daftar</button>
+    <button id="btnClearAll" style="background:#ff9a9a;color:#001">Clear Semua</button>
+  </div>
+
+  <label style="margin-top:14px">Daftar nilai (editable)</label>
+  <div id="listWrap"></div>
+
+  <div style="margin-top:10px" class="grid">
+    <div>
+      <label>Rolling average window (N)</label>
+      <input id="rollingN" type="number" min="1" placeholder="Isi N (mis: 3 untuk rata2 3 laga)">
+      <label style="margin-top:8px">Trim fraction untuk trimmed mean</label>
+      <select id="trimPct">
+        <option value="0.0">0% (no trim)</option>
+        <option value="0.05">5%</option>
+        <option value="0.10" selected>10%</option>
+        <option value="0.15">15%</option>
+      </select>
+      <div class="hint">Trimmed mean membuang sejumlah kecil data ekstrem (di setiap sisi) untuk rata-rata lebih robust.</div>
+    </div>
+
+    <div>
+      <label>Operasi</label>
+      <div style="display:flex;gap:8px">
+        <button id="btnCompute">Hitung Statistik</button>
+        <button id="btnExport" style="background:#ffd27a;color:#001">Copy JSON</button>
+      </div>
+      <div style="margin-top:8px" class="small">Hasil akan muncul di bawah. Kamu bisa copy nilai rata-rata langsung ke engine.</div>
+    </div>
+  </div>
+
+  <div class="result" id="resultArea" style="display:none">
+    <div class="stat" id="statsRow"></div>
+
+    <div style="margin-top:10px">
+      <label>Rata-rata (mean)</label>
+      <input id="outMean" readonly>
+      <label>Median</label>
+      <input id="outMedian" readonly>
+      <label>Standar deviasi (sample)</label>
+      <input id="outStd" readonly>
+      <label>Trimmed mean</label>
+      <input id="outTrim" readonly>
+      <label>Jumlah sampel</label>
+      <input id="outN" readonly>
+      <label>Rolling averages (list)</label>
+      <textarea id="outRolling" rows="3" readonly></textarea>
+    </div>
+
+    <div style="margin-top:10px">
+      <label>Catatan / Tips</label>
+      <div class="small">Jika dataset kecil (<4), gunakan mean sederhana. Trimmed mean lebih berguna jika ada outlier. Rolling average membantu lihat tren terbaru.</div>
+    </div>
+  </div>
+
+  <div style="margin-top:12px" class="hint">
+    Contoh alur: ambil xG 5 laga terakhir dari Understat → paste di kotak atas → Parse → Compute → ambil <strong>Rata-rata (mean)</strong> untuk dimasukkan ke <code>adv_xg_home</code>.
+  </div>
+</div>
+
+<script>
+/* Utility */
+function toNumber(v){ const n=parseFloat(String(v).replace(',', '.')); return isFinite(n)?n:NaN; }
+function mean(arr){ if(!arr.length) return NaN; return arr.reduce((a,b)=>a+b,0)/arr.length; }
+function median(arr){
+  if(!arr.length) return NaN;
+  const s = arr.slice().sort((a,b)=>a-b);
+  const m = Math.floor(s.length/2);
+  return s.length%2? s[m] : (s[m-1]+s[m])/2;
+}
+function stdSample(arr){
+  if(arr.length<2) return 0;
+  const mu = mean(arr);
+  const ss = arr.reduce((a,b)=>a+Math.pow(b-mu,2),0);
+  return Math.sqrt(ss/(arr.length-1));
+}
+function trimmedMean(arr, trimFraction){
+  if(!arr.length) return NaN;
+  const n = arr.length;
+  const k = Math.floor(n * trimFraction);
+  if(k===0) return mean(arr);
+  const s = arr.slice().sort((a,b)=>a-b);
+  const trimmed = s.slice(k, n-k);
+  return trimmed.length? mean(trimmed) : mean(s);
+}
+function rolling(arr, N){
+  if(!arr.length || N<=0) return [];
+  const out=[];
+  for(let i=0;i<=arr.length-N;i++){
+    out.push(mean(arr.slice(i,i+N)));
+  }
+  return out;
+}
+
+/* DOM helpers */
+const listWrap = document.getElementById('listWrap');
+const pasteArea = document.getElementById('pasteArea');
+const btnParse = document.getElementById('btnParse');
+const btnClearAll = document.getElementById('btnClearAll');
+const btnCompute = document.getElementById('btnCompute');
+const btnExport = document.getElementById('btnExport');
+
+let items = []; // numeric array
+
+function renderList(){
+  listWrap.innerHTML = '';
+  const tbl = document.createElement('table');
+  const thead = document.createElement('thead');
+  thead.innerHTML = '<tr><th>#</th><th>xG / xGA</th><th style="width:200px">Aksi</th></tr>';
+  tbl.appendChild(thead);
+  const tbody = document.createElement('tbody');
+  items.forEach((v,i)=>{
+    const tr = document.createElement('tr');
+    const tdIndex = document.createElement('td'); tdIndex.textContent = i+1;
+    const tdVal = document.createElement('td');
+    const inp = document.createElement('input');
+    inp.value = isNaN(v)? '' : v;
+    inp.addEventListener('change', (e)=> {
+      const nv = toNumber(e.target.value);
+      items[i] = isFinite(nv)? nv : NaN;
+    });
+    tdVal.appendChild(inp);
+    const tdAksi = document.createElement('td');
+    const btnUp = document.createElement('button'); btnUp.textContent='↑'; btnUp.title='Naik';
+    btnUp.style.width='40px';
+    btnUp.addEventListener('click', ()=>{ if(i>0){ const tmp=items[i-1]; items[i-1]=items[i]; items[i]=tmp; renderList(); }});
+    const btnDown = document.createElement('button'); btnDown.textContent='↓'; btnDown.title='Turun'; btnDown.style.width='40px';
+    btnDown.addEventListener('click', ()=>{ if(i<items.length-1){ const tmp=items[i+1]; items[i+1]=items[i]; items[i]=tmp; renderList(); }});
+    const btnDel = document.createElement('button'); btnDel.textContent='Hapus'; btnDel.style.background='#ff9a9a';
+    btnDel.addEventListener('click', ()=>{ items.splice(i,1); renderList(); });
+    tdAksi.appendChild(btnUp); tdAksi.appendChild(btnDown); tdAksi.appendChild(btnDel);
+    tr.appendChild(tdIndex); tr.appendChild(tdVal); tr.appendChild(tdAksi);
+    tbody.appendChild(tr);
+  });
+  tbl.appendChild(tbody);
+  listWrap.appendChild(tbl);
+
+  // add controls
+  const addRow = document.createElement('div'); addRow.style.marginTop='8px';
+  const btnAdd = document.createElement('button'); btnAdd.textContent='Tambah nilai (baru)';
+  btnAdd.addEventListener('click', ()=>{ items.push(NaN); renderList(); });
+  const btnImportExample = document.createElement('button'); btnImportExample.textContent='Contoh 5 nilai'; btnImportExample.style.background='#a2f0a2';
+  btnImportExample.addEventListener('click', ()=>{ items = [1.24,0.87,1.02,1.65,0.95]; renderList(); });
+  addRow.appendChild(btnAdd); addRow.appendChild(btnImportExample);
+  listWrap.appendChild(addRow);
+}
+
+/* parse function */
+btnParse.addEventListener('click', ()=>{
+  const raw = pasteArea.value.trim();
+  if(!raw){ alert('Tidak ada yang dipaste'); return; }
+  // split by comma, newline, semicolon, or whitespace
+  const parts = raw.split(/[\s,;]+/).map(s=>s.trim()).filter(Boolean);
+  const nums = parts.map(p=>toNumber(p)).filter(n=>isFinite(n));
+  if(!nums.length){ alert('Tidak ditemukan angka valid'); return; }
+  items = items.concat(nums);
+  renderList();
+  pasteArea.value = '';
+});
+
+/* clear all */
+btnClearAll.addEventListener('click', ()=>{
+  if(!confirm('Hapus semua nilai?')) return;
+  items = []; renderList();
+});
+
+/* compute */
+btnCompute.addEventListener('click', ()=>{
+  const clean = items.map(x=>toNumber(x)).filter(n=>isFinite(n));
+  if(!clean.length){ alert('Belum ada data valid.'); return; }
+  const N = clean.length;
+  const mu = mean(clean);
+  const med = median(clean);
+  const sd = stdSample(clean);
+  const trimP = parseFloat(document.getElementById('trimPct').value || '0');
+  const trimmed = trimmedMean(clean, trimP);
+  const rollingN = parseInt(document.getElementById('rollingN').value) || 0;
+  const rollingArr = rollingN>0? rolling(clean, rollingN) : [];
+  // show
+  document.getElementById('resultArea').style.display = 'block';
+  const statsRow = document.getElementById('statsRow');
+  statsRow.innerHTML = '';
+  const blocks = [
+    {t:'Mean',v:mu.toFixed(3)},
+    {t:'Median',v:med.toFixed(3)},
+    {t:'Std (s)',v:sd.toFixed(3)},
+    {t:'Trimmed',v:trimmed.toFixed(3)},
+    {t:'N',v:N}
+  ];
+  blocks.forEach(b=>{
+    const d = document.createElement('div'); d.innerHTML = `<strong>${b.t}</strong><div class="small">${b.v}</div>`; statsRow.appendChild(d);
+  });
+  document.getElementById('outMean').value = mu.toFixed(3);
+  document.getElementById('outMedian').value = med.toFixed(3);
+  document.getElementById('outStd').value = sd.toFixed(3);
+  document.getElementById('outTrim').value = trimmed.toFixed(3);
+  document.getElementById('outN').value = N;
+  document.getElementById('outRolling').value = rollingArr.map(x=>x.toFixed(3)).join(', ');
+});
+
+/* export JSON */
+btnExport.addEventListener('click', ()=>{
+  const clean = items.map(x=>toNumber(x)).filter(n=>isFinite(n));
+  const obj = {
+    createdAt: new Date().toISOString(),
+    values: clean,
+    stats: {
+      mean: clean.length? mean(clean) : null,
+      median: clean.length? median(clean) : null,
+      std: clean.length? stdSample(clean) : null,
+      n: clean.length
+    }
+  };
+  const s = JSON.stringify(obj, null, 2);
+  navigator.clipboard && navigator.clipboard.writeText(s).then(()=> alert('JSON disalin ke clipboard'), ()=>{ prompt('Salin JSON berikut:', s); });
+});
+
+/* initial render */
+renderList();
+</script>
+</body>
+    </html>

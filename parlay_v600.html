@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Match Prediction Engine v600</title>
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>Match Prediction Engine v600 (Ultra Neutral + Anti-Bias)</h2>
+
+<!-- ================== CONTEXT ================== -->
+<div class="card">
+<h3>Context Pertandingan</h3>
+
+<label>Judul Pertandingan</label>
+<input id="title" type="text">
+
+<label>Liga</label>
+<input id="league" type="text">
+
+<label>Mode Liga</label>
+<select id="modeMatch">
+<option value="league">League</option>
+<option value="cup">Cup</option>
+<option value="derby">Derby</option>
+<option value="friendly">Friendly</option>
+</select>
+
+<label>Cuaca</label>
+<select id="weather">
+<option value="normal">Normal</option>
+<option value="rain">Rain</option>
+<option value="cold">Cold</option>
+<option value="hot">Hot</option>
+</select>
+
+<label>Kondisi Lapangan</label>
+<select id="pitch">
+<option value="normal">Normal</option>
+<option value="heavy">Heavy</option>
+<option value="wet">Wet</option>
+</select>
+
+<label>Importance (1–10)</label>
+<input id="importance" type="number" min="1" max="10">
+
+<label>Catatan</label>
+<textarea id="notes"></textarea>
+
+<button id="autoContext">AUTO Context</button>
+
+</div>
+
+
+<!-- ================== H2H SECTION ================== -->
+<div class="card">
+<h3>H2H (Head-to-Head)</h3>
+
+<label>Masukkan skor H2H (format: 2-1, 3-0, 1-1)</label>
+<textarea id="h2hInput" placeholder=""></textarea>
+
+<button id="processH2H">Proses H2H</button>
+<div id="h2hResult"></div>
+<button id="autoH2H">AUTO H2H</button>
+
+</div>
+
+
+<!-- ================== TEAM + ABSENCE ================== -->
+<div class="card">
+<h3>Statistik Tim & Absensi</h3>
+
+<div class="row">
+<div class="col">
+<h4>Home</h4>
+
+<label>Nama Tim</label><input id="home_name">
+
+<label>GPG</label><input id="home_gpg">
+<label>GC</label><input id="home_gc">
+<label>xG</label><input id="home_xg">
+<label>xGA</label><input id="home_xga">
+
+<label>Form (W/D/L)</label><input id="home_form">
+
+<label>Quality (1–10)</label><input id="home_quality">
+<label>Stability (1–10)</label><input id="home_stability">
+
+</div>
+
+<div class="col">
+<h4>Away</h4>
+
+<label>Nama Tim</label><input id="away_name">
+
+<label>GPG</label><input id="away_gpg">
+<label>GC</label><input id="away_gc">
+<label>xG</label><input id="away_xg">
+<label>xGA</label><input id="away_xga">
+
+<label>Form (W/D/L)</label><input id="away_form">
+
+<label>Quality (1–10)</label><input id="away_quality">
+<label>Stability (1–10)</label><input id="away_stability">
+
+</div>
+
+<div class="col">
+<h4>Absensi Pemain</h4>
+
+<label>Home GK</label><input id="home_abs_gk">
+<label>Home DF</label><input id="home_abs_df">
+<label>Home MD</label><input id="home_abs_md">
+<label>Home FW</label><input id="home_abs_fw">
+
+<label>Away GK</label><input id="away_abs_gk">
+<label>Away DF</label><input id="away_abs_df">
+<label>Away MD</label><input id="away_abs_md">
+<label>Away FW</label><input id="away_abs_fw">
+
+<button id="autoAbsence">AUTO Absensi</button>
+
+</div>
+</div>
+
+<button id="autoTeam">AUTO Team Stats</button>
+
+</div>
+
+<!-- ================== ANALYZE ================== -->
+<div class="card">
+<h3>Hasil Analisis v600</h3>
+
+<button id="analyze">ANALYZE v600</button>
+<button id="clear">CLEAR</button>
+
+<pre id="result"></pre>
+</div>
+
+</div>
+
+<!-- BAGIAN 2 – ENGINE v600 (Core + Anti-bias Under + Debug-ready) -->
+<script>
+const V600 = {
+    debug: false
+};
+
+// ---------- Utilitas umum ----------
+V600.safeNum = function (v, def = 0) {
+    const n = parseFloat(v);
+    return Number.isFinite(n) ? n : def;
+};
+
+V600.clamp = function (x, min, max) {
+    return Math.max(min, Math.min(max, x));
+};
+
+V600.log = function (...msg) {
+    if (!V600.debug) return;
+    const box = document.getElementById("debugOutput");
+    if (box) box.textContent += msg.join(" ") + "\n";
+};
+
+V600.setDebug = function (flag) {
+    V600.debug = !!flag;
+    const box = document.getElementById("debugOutput");
+    if (box && !flag) box.textContent = "";
+};
+
+// Jika ada checkbox debugToggle, hubungkan
+window.addEventListener("DOMContentLoaded", () => {
+    const dbg = document.getElementById("debugToggle");
+    if (dbg) dbg.addEventListener("change", e => V600.setDebug(e.target.checked));
+});
+
+// ---------- Poisson & Over/Under ----------
+V600.poisson = function (lambda, k) {
+    if (lambda <= 0) return k === 0 ? 1 : 0;
+    if (k < 0) return 0;
+    return Math.exp(-lambda) * Math.pow(lambda, k) / V600.factorial(k);
+};
+
+V600.factorial = (function () {
+    const cache = [1];
+    return function (n) {
+        if (cache[n] != null) return cache[n];
+        let r = cache[cache.length - 1];
+        for (let i = cache.length; i <= n; i++) {
+            r *= i;
+            cache[i] = r;
+        }
+        return cache[n];
+    };
+})();
+
+// Over/Under dari total lambda (tanpa bias potong skor tinggi)
+V600.totalGoalsOU = function (lamH, lamA, line) {
+    const lam = lamH + lamA;
+    let pUnder = 0;
+    for (let k = 0; k <= line; k++) {
+        pUnder += V600.poisson(lam, k);
+    }
+    const pOver = 1 - pUnder;
+    return { over: pOver, under: pUnder };
+};
+
+// ---------- Parser H2H ----------
+V600.parseH2H = function (raw) {
+    const lines = (raw || "").split(/\n+/).map(s => s.trim()).filter(Boolean);
+    let h = 0, a = 0, n = 0;
+    for (const line of lines) {
+        const m = line.match(/^(\d+)\s*-\s*(\d+)$/);
+        if (!m) continue;
+        h += parseInt(m[1], 10);
+        a += parseInt(m[2], 10);
+        n++;
+    }
+    if (n === 0) {
+        return { valid: false, homeGoals: 0, awayGoals: 0, avgTotal: 0 };
+    }
+    const avgTotal = (h + a) / n;
+    return {
+        valid: true,
+        homeGoals: h,
+        awayGoals: a,
+        avgTotal: avgTotal
+    };
+};
+
+// ---------- Build Team dari input ----------
+V600.buildTeam = function (side) {
+    // side: "home" atau "away"
+    const p = side === "home" ? "home_" : "away_";
+
+    const gpg = V600.safeNum(document.getElementById(p + "gpg").value);
+    const gc = V600.safeNum(document.getElementById(p + "gc").value);
+    let xg = V600.safeNum(document.getElementById(p + "xg").value);
+    let xga = V600.safeNum(document.getElementById(p + "xga").value);
+    const quality = V600.clamp(
+        V600.safeNum(document.getElementById(p + "quality").value, 5),
+        1, 10
+    );
+    const stability = V600.clamp(
+        V600.safeNum(document.getElementById(p + "stability").value, 5),
+        1, 10
+    );
+    const formStr = (document.getElementById(p + "form").value || "").toUpperCase();
+
+    // Fallback netral jika xG/xGA kosong tapi GPG/GC ada
+    if (xg === 0 && gpg > 0) xg = gpg;
+    if (xga === 0 && gc > 0) xga = gc;
+
+    // Rating form sederhana
+    let formScore = 0;
+    for (const c of formStr) {
+        if (c === "W") formScore += 1;
+        else if (c === "D") formScore += 0.3;
+        else if (c === "L") formScore -= 0.8;
+    }
+    formScore = V600.clamp(5 + formScore, 1, 10);
+
+    // Attack / defense index dasar
+    const atkBase = (gpg * 0.4) + (xg * 0.6);
+    const defBase = (2.4 - gc) * 0.5 + (1.6 - xga) * 0.5; // makin rendah GC/xGA → makin kuat
+
+    const atkIdx = Math.max(0.1, atkBase);
+    const defIdx = Math.max(0.1, defBase);
+
+    V600.log(side.toUpperCase() + " GPG", gpg);
+    V600.log(side.toUpperCase() + " xG", xg);
+    V600.log(side.toUpperCase() + " ATK idx", atkIdx);
+    V600.log(side.toUpperCase() + " DEF idx", defIdx);
+
+    return {
+        gpg, gc, xg, xga,
+        quality, stability,
+        formScore,
+        atkIdx, defIdx
+    };
+};
+
+// ---------- Absence severity ----------
+V600.buildAbsence = function () {
+    const roles = ["gk", "df", "md", "fw"];
+    const weight = { gk: 1.2, df: 0.7, md: 0.9, fw: 1.1 };
+
+    let h = 0, a = 0;
+    for (const r of roles) {
+        const vh = V600.safeNum(document.getElementById("home_abs_" + r).value);
+        const va = V600.safeNum(document.getElementById("away_abs_" + r).value);
+        h += vh * weight[r];
+        a += va * weight[r];
+    }
+    const hScaled = V600.clamp(h / 5, 0, 10);
+    const aScaled = V600.clamp(a / 5, 0, 10);
+
+    V600.log("Absence Home", hScaled);
+    V600.log("Absence Away", aScaled);
+
+    return { home: hScaled, away: aScaled };
+};
+
+// ---------- Context ----------
+V600.buildContext = function () {
+    const mode = (document.getElementById("modeMatch").value || "league").toLowerCase();
+    const weather = (document.getElementById("weather").value || "normal").toLowerCase();
+    const pitch = (document.getElementById("pitch").value || "normal").toLowerCase();
+    const imp = V600.clamp(V600.safeNum(document.getElementById("importance").value, 5), 1, 10);
+
+    // Tempo dasar (bisa di-auto kan di script lain)
+    let tempo = 6;
+    // Home advantage baseline
+    let homeAdv = 0.25;
+
+    if (mode.includes("derby")) tempo += 1;
+    if (mode.includes("cup")) tempo += 0.5;
+
+    if (weather === "rain" || pitch === "heavy" || pitch === "wet") tempo -= 0.5;
+
+    tempo = V600.clamp(tempo, 3, 9);
+
+    V600.log("Mode", mode);
+    V600.log("Cuaca", weather);
+    V600.log("Pitch", pitch);
+    V600.log("Importance", imp);
+    V600.log("Tempo", tempo);
+    V600.log("HomeAdv", homeAdv);
+
+    return { mode, weather, pitch, importance: imp, tempo, homeAdv };
+};
+
+// ---------- Estimasi lambda (ekspektasi gol) ----------
+V600.estimateLambda = function (home, away, ctx, h2h, abs) {
+    // Attack vs defense interplay
+    let lamH = (home.atkIdx * 0.7 + (3 - away.defIdx) * 0.3);
+    let lamA = (away.atkIdx * 0.7 + (3 - home.defIdx) * 0.3);
+
+    // Form & quality/stability adjustment (kecil agar netral)
+    const factorHome = 1
+        + (home.formScore - 5) / 50
+        + (home.quality - 5) / 60
+        + (home.stability - 5) / 80;
+    const factorAway = 1
+        + (away.formScore - 5) / 50
+        + (away.quality - 5) / 60
+        + (away.stability - 5) / 80;
+
+    lamH *= factorHome;
+    lamA *= factorAway;
+
+    // H2H total goal mempengaruhi sedikit saja
+    if (h2h.valid && h2h.avgTotal > 0) {
+        const bump = (h2h.avgTotal - 2.5) / 10; // ±0.2 maksimum
+        lamH += bump / 2;
+        lamA += bump / 2;
+    }
+
+    // Importance & tempo → adjust total gol
+    const tempoFactor = 1 + (ctx.tempo - 6) / 25;       // ±20% max
+    const impFactor = 1 + (ctx.importance - 5) / 30;    // ±17% max
+
+    lamH *= tempoFactor * impFactor;
+    lamA *= tempoFactor * impFactor;
+
+    // Weather & pitch penalty
+    if (ctx.weather === "rain" || ctx.pitch === "wet") {
+        lamH *= 0.95;
+        lamA *= 0.95;
+    }
+    if (ctx.weather === "cold") {
+        lamH *= 0.97;
+        lamA *= 0.97;
+    }
+    if (ctx.weather === "hot") {
+        lamH *= 0.97;
+        lamA *= 0.97;
+    }
+
+    // Absence mengurangi serangan tim sendiri & meningkatkan peluang lawan sedikit
+    if (abs.home > 0) {
+        const f = 1 - abs.home / 50; // loss of attacking power
+        lamH *= f;
+        lamA *= (1 + abs.home / 120);
+    }
+    if (abs.away > 0) {
+        const f = 1 - abs.away / 50;
+        lamA *= f;
+        lamH *= (1 + abs.away / 120);
+    }
+
+    // Home advantage (asimetris)
+    lamH *= 1 + ctx.homeAdv;
+    lamA *= 1 - ctx.homeAdv / 2;
+
+    // Clamp supaya wajar
+    lamH = V600.clamp(lamH, 0.1, 4.5);
+    lamA = V600.clamp(lamA, 0.1, 4.5);
+
+    V600.log("lambda Home", lamH);
+    V600.log("lambda Away", lamA);
+
+    return { lamH, lamA };
+};
+
+// ---------- Simulasi skor & probabilitas ----------
+V600.simulate = function (lam) {
+    const maxG = 8; // perbaikan: tidak memangkas skor tinggi di 5
+    const lamH = lam.lamH;
+    const lamA = lam.lamA;
+
+    let pH = 0, pD = 0, pA = 0;
+
+    for (let h = 0; h <= maxG; h++) {
+        const pPH = V600.poisson(lamH, h);
+        for (let a = 0; a <= maxG; a++) {
+            const pPA = V600.poisson(lamA, a);
+            const p = pPH * pPA;
+
+            if (h > a) pH += p;
+            else if (h === a) pD += p;
+            else pA += p;
+        }
+    }
+
+    const total = pH + pD + pA;
+    if (total > 0) {
+        pH /= total;
+        pD /= total;
+        pA /= total;
+    }
+
+    // Over/Under dengan total lambda (tanpa bias Under)
+    const ou25 = V600.totalGoalsOU(lamH, lamA, 2);
+    const ou35 = V600.totalGoalsOU(lamH, lamA, 3);
+
+    return {
+        pH, pD, pA,
+        ou25_over: ou25.over,
+        ou25_under: ou25.under,
+        ou35_over: ou35.over,
+        ou35_under: ou35.under
+    };
+};
+
+// ---------- ANALYZE UTAMA ----------
+V600.analyze = function () {
+    const h2hRaw = document.getElementById("h2hInput").value;
+    const h2h = V600.parseH2H(h2hRaw);
+    const home = V600.buildTeam("home");
+    const away = V600.buildTeam("away");
+    const abs = V600.buildAbsence();
+    const ctx = V600.buildContext();
+
+    const lam = V600.estimateLambda(home, away, ctx, h2h, abs);
+    const sim = V600.simulate(lam);
+
+    function pct(x) { return (x * 100).toFixed(1) + "%"; }
+
+    let out = "";
+    out += "=== Match Context ===\n";
+    out += "Mode : " + ctx.mode + "\n";
+    out += "Cuaca : " + ctx.weather + ", Lapangan: " + ctx.pitch + "\n";
+    out += "Importance: " + ctx.importance.toFixed(1) + ", Tempo: " + ctx.tempo.toFixed(1) + "\n\n";
+
+    out += "--- Profil Tim (berdasarkan input) ---\n";
+    out += "Home  GPG:" + home.gpg + " GC:" + home.gc + " xG:" + home.xg + " xGA:" + home.xga + "\n";
+    out += "Away  GPG:" + away.gpg + " GC:" + away.gc + " xG:" + away.xg + " xGA:" + away.xga + "\n\n";
+
+    out += "--- Absensi (skala ringan) ---\n";
+    out += "Home severity: " + abs.home.toFixed(2) + "/10\n";
+    out += "Away severity: " + abs.away.toFixed(2) + "/10\n\n";
+
+    out += "--- H2H ---\n";
+    if (h2h.valid) {
+        out += "Total Home Gol: " + h2h.homeGoals + ", Away Gol: " + h2h.awayGoals + "\n";
+        out += "Rata2 total gol per match: " + h2h.avgTotal.toFixed(2) + "\n\n";
+    } else {
+        out += "Tidak ada data H2H valid (boleh dikosongkan jika jarang bertemu).\n\n";
+    }
+
+    out += "--- Probabilitas Hasil (netral) ---\n";
+    out += "Home menang : " + pct(sim.pH) + "\n";
+    out += "Seri        : " + pct(sim.pD) + "\n";
+    out += "Away menang : " + pct(sim.pA) + "\n\n";
+
+    out += "--- Probabilitas Total Gol (bukan ajakan pilih sisi) ---\n";
+    out += "Over 2.5 : " + pct(sim.ou25_over) + " | Under 2.5 : " + pct(sim.ou25_under) + "\n";
+    out += "Over 3.5 : " + pct(sim.ou35_over) + " | Under 3.5 : " + pct(sim.ou35_under) + "\n\n";
+
+    out += "Catatan:\n";
+    out += "- Semua angka murni dari input statistik Anda.\n";
+    out += "- Tidak menggunakan odds & tidak diarahkan condong ke Home/Away maupun Over/Under.\n";
+    out += "- Anti-bias menghindari probabilitas ekstrem tanpa dukungan data.\n";
+
+    const resBox = document.getElementById("result");
+    if (resBox) resBox.textContent = out;
+};
+
+// Tombol ANALYZE & CLEAR
+window.addEventListener("DOMContentLoaded", () => {
+    const btnAnalyze = document.getElementById("analyze");
+    if (btnAnalyze) btnAnalyze.addEventListener("click", V600.analyze);
+
+    const btnClear = document.getElementById("clear");
+    if (btnClear) btnClear.addEventListener("click", () => {
+        const res = document.getElementById("result");
+        if (res) res.textContent = "";
+        const dbg = document.getElementById("debugOutput");
+        if (dbg) dbg.textContent = "";
+    });
+});
+</script><!-- BAGIAN 3 — AUTO ENGINE v600 (Auto Input + Helper + H2H) -->
+<script>
+/* ============================================================
+   AUTO ENGINE v600
+   Semua AUTO hanya menghitung dari input user.
+   Tidak ada contoh angka. Tidak mengubah probabilitas.
+   ============================================================ */
+
+// ----------- Debug Helper -----------
+function dbg(msg){
+    const box = document.getElementById("debugOutput");
+    if (V600.debug && box) box.textContent += msg + "\n";
+}
+
+
+// ============================================================
+// 1. AUTO CONTEXT (Liga → Tempo / Importance dasar)
+// ============================================================
+document.getElementById("autoContext").addEventListener("click", function(){
+
+    const liga = (document.getElementById("league").value || "").toLowerCase();
+    let tempo = 6;      // nilai default netral
+    let importance = 5; // nilai netral
+
+    // Tanpa contoh — hanya profil liga umum
+    if (liga.includes("premier")) tempo = 8.5;
+    if (liga.includes("bundes")) tempo = 8.0;
+    if (liga.includes("la liga")) tempo = 7.0;
+    if (liga.includes("serie")) tempo = 7.2;
+    if (liga.includes("ligue")) tempo = 7.1;
+    if (liga.includes("eredivisie")) tempo = 8.3;
+    if (liga.includes("championship")) tempo = 7.4;
+    if (liga.includes("mls")) tempo = 8.0;
+    if (liga.includes("k league")) tempo = 6.5;
+    if (liga.includes("j1")) tempo = 7.0;
+    if (liga.includes("liga 1")) tempo = 6.0;
+
+    // Importance ditentukan mode
+    const mode = document.getElementById("modeMatch").value;
+    if (mode === "derby") importance = 9;
+    if (mode === "cup") importance = 8;
+    if (mode === "friendly") importance = 3;
+
+    document.getElementById("importance").value = importance;
+    // Tempo diletakkan di input hidden jika tersedia
+    if (document.getElementById("tempo")) {
+        document.getElementById("tempo").value = tempo.toFixed(1);
+    }
+
+    dbg("AUTO CONTEXT → tempo:" + tempo + " importance:" + importance);
+});
+
+
+// ============================================================
+// 2. AUTO H2H (mengubah skor menjadi total goal home/away)
+// ============================================================
+document.getElementById("autoH2H").addEventListener("click", function(){
+
+    const raw = document.getElementById("h2hInput").value.trim();
+    if (!raw){
+        document.getElementById("h2hResult").innerHTML = "H2H kosong.";
+        return;
+    }
+
+    const parsed = V600.parseH2H(raw);
+
+    if (!parsed.valid){
+        document.getElementById("h2hResult").innerHTML =
+            "Format H2H salah (gunakan format: 2-1, 3-0, 1-1)";
+        return;
+    }
+
+    let html = "";
+    html += "Total Gol Home : " + parsed.homeGoals + "<br>";
+    html += "Total Gol Away : " + parsed.awayGoals + "<br>";
+    html += "Rata2 Total Gol : " + parsed.avgTotal.toFixed(2);
+
+    document.getElementById("h2hResult").innerHTML = html;
+    dbg("AUTO H2H OK");
+});
+
+
+// ============================================================
+// 3. AUTO Absensi (GK/DF/MD/FW → severity score sederhana)
+// ============================================================
+document.getElementById("autoAbsence").addEventListener("click", function(){
+
+    const roles = ["gk","df","md","fw"];
+    const w = { gk:1.2, df:0.7, md:0.9, fw:1.1 };
+
+    let h=0, a=0;
+
+    for(const r of roles){
+        const hVal = Number(document.getElementById("home_abs_" + r).value || 0);
+        const aVal = Number(document.getElementById("away_abs_" + r).value || 0);
+
+        h += hVal * w[r];
+        a += aVal * w[r];
+    }
+
+    const res = `
+        Home severity: ${(h/5).toFixed(2)}<br>
+        Away severity: ${(a/5).toFixed(2)}
+    `;
+
+    document.getElementById("h2hResult").innerHTML = res;
+    dbg("AUTO ABSENCE OK");
+});
+
+
+// ============================================================
+// 4. AUTO TEAM STATS (xG/xGA Fallback, Form parsing)
+// ============================================================
+document.getElementById("autoTeam").addEventListener("click", function(){
+
+    // Form → Quality sederhana bila kosong
+    function autoForm(idForm, idQuality){
+        const f = (document.getElementById(idForm).value || "").toUpperCase();
+        if (!f) return;
+
+        let score = 5;
+        for (const c of f){
+            if (c==="W") score += 0.8;
+            else if (c==="D") score += 0.3;
+            else if (c==="L") score -= 0.8;
+        }
+        score = Math.max(1, Math.min(10, score));
+        document.getElementById(idQuality).value = score.toFixed(1);
+    }
+
+    autoForm("home_form", "home_quality");
+    autoForm("away_form", "away_quality");
+
+    dbg("AUTO TEAM OK");
+});
+
+</script><!-- BAGIAN 4 — CONTROLLER v600 (Init + Debug + Placeholder) -->
+<script>
+// Init dasar setelah semua script v600 ter-load
+window.addEventListener("DOMContentLoaded", () => {
+    // Placeholder hasil analisis
+    const resultBox = document.getElementById("result");
+    if (resultBox && !resultBox.textContent.trim()) {
+        resultBox.textContent =
+            "Belum ada analisis.\n" +
+            "Isi data statistik (GPG, GC, xG, xGA, Form, Absensi, H2H, Context)\n" +
+            "lalu tekan tombol ANALYZE v600.";
+    }
+
+    // Jika ada elemen debugToggle, hubungkan ke V600.debug
+    const dbgToggle = document.getElementById("debugToggle");
+    const dbgOut = document.getElementById("debugOutput");
+
+    if (dbgToggle) {
+        dbgToggle.addEventListener("change", (e) => {
+            V600.setDebug(e.target.checked);
+            if (dbgOut && !e.target.checked) {
+                dbgOut.textContent = "";
+            }
+        });
+    }
+
+    // Jika tidak ada debugOutput tapi debug diaktifkan secara paksa, tidak melakukan apa-apa
+    // (tidak ada contoh teks yang dimasukkan otomatis).
+});
+</script>
+
+</body>
+</html>

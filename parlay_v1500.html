@@ -1,0 +1,2361 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Match Prediction Engine v1500 (Multi-Formation + Auto-Calc)</title>
+
+<style>
+    :root {
+        --bg: #ffffff;
+        --text: #000000;
+        --card: #f5f5f5;
+        --border: #dcdcdc;
+        --accent: #3366ff;
+    }
+    [data-theme="dark"] {
+        --bg: #050505;
+        --text: #f5f5f5;
+        --card: #151515;
+        --border: #333333;
+        --accent: #4d7dff;
+    }
+    * { box-sizing: border-box; }
+    body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+    }
+    .container {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 16px 12px 40px;
+    }
+    .header-main {
+        padding: 14px 16px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: var(--card);
+        margin-bottom: 16px;
+    }
+    .title-main {
+        font-size: 20px;
+        font-weight: bold;
+        margin-bottom: 6px;
+    }
+    .subtitle {
+        font-size: 12px;
+        opacity: 0.9;
+        line-height: 1.5;
+    }
+    .section {
+        margin-bottom: 16px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: var(--card);
+        padding: 16px;
+    }
+    .section-title {
+        font-size: 16px;
+        font-weight: bold;
+        margin-bottom: 10px;
+    }
+    label {
+        font-size: 13px;
+        font-weight: 600;
+        display: block;
+        margin-bottom: 4px;
+    }
+    input, select, textarea {
+        width: 100%;
+        padding: 7px 8px;
+        margin-bottom: 10px;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+        background: var(--bg);
+        color: var(--text);
+        font-size: 13px;
+    }
+    textarea {
+        resize: vertical;
+        min-height: 70px;
+    }
+    button {
+        padding: 7px 12px;
+        border-radius: 6px;
+        border: none;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+    .btn-primary {
+        background: var(--accent);
+        color: #fff;
+    }
+    .btn-secondary {
+        background: #777;
+        color: #fff;
+    }
+    .btn-ghost {
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--text);
+    }
+    button:hover { opacity: 0.9; }
+    .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+    }
+    .col {
+        flex: 1 1 260px;
+        min-width: 250px;
+    }
+    pre {
+        white-space: pre-wrap;
+        font-size: 12px;
+        background: var(--bg);
+        padding: 10px;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+        min-height: 220px;
+    }
+    .top-bar {
+        position: fixed;
+        top: 8px;
+        right: 8px;
+        z-index: 10;
+        padding: 6px 10px;
+        border-radius: 20px;
+        border: 1px solid var(--border);
+        background: var(--card);
+        font-size: 11px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .top-bar input[type="checkbox"] { margin: 0; }
+    canvas {
+        background: var(--bg);
+        border-radius: 8px;
+        border: 1px solid var(--border);
+    }
+    .mini-text {
+        font-size: 11px;
+        opacity: 0.85;
+    }
+    table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 11px;
+    }
+    th, td {
+        border: 1px solid var(--border);
+        padding: 3px 5px;
+        text-align: center;
+    }
+    .chip-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: 8px;
+    }
+</style>
+
+<script>
+function initTheme() {
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    document.documentElement.setAttribute("data-theme", prefersDark ? "dark" : "light");
+    const chk = document.getElementById("themeToggle");
+    if (chk) chk.checked = prefersDark;
+}
+function toggleTheme(chk) {
+    document.documentElement.setAttribute("data-theme", chk.checked ? "dark" : "light");
+}
+window.addEventListener("DOMContentLoaded", initTheme);
+</script>
+</head>
+
+<body>
+<div class="top-bar">
+    <span>Mode Gelap</span>
+    <input type="checkbox" id="themeToggle" onchange="toggleTheme(this)">
+</div>
+
+<div class="container">
+    <div class="header-main">
+        <div class="title-main">Match Prediction Engine v1500 (Multi-Formation + Auto-Calc)</div>
+        <div class="subtitle">
+            - Tidak memakai odds & tidak menyimpan data klub default di script<br>
+            - Semua output murni dari input terbaru yang Anda isi sendiri (statistik, form, taktik, psikologis, dll.)<br>
+            - Poisson + Monte Carlo + Score Matrix + Uncertainty + Tactics/xThreat/Finishing/Psychology<br>
+            - 2 Formasi per tim (utama + alternatif) → engine hitung fleksibilitas taktik otomatis, tanpa harus isi menit 60
+        </div>
+    </div>
+
+    <!-- CONTEXT -->
+    <div class="section">
+        <div class="section-title">Context Pertandingan</div>
+        <div class="row">
+            <div class="col">
+                <label>Judul Pertandingan</label>
+                <input id="m_title" type="text">
+
+                <label>Liga / Kompetisi</label>
+                <input id="m_league" type="text">
+
+                <label>Tanggal (opsional)</label>
+                <input id="m_date" type="text">
+
+                <label>Jam Kick-off (opsional)</label>
+                <input id="m_time" type="text">
+            </div>
+            <div class="col">
+                <label>Mode Laga</label>
+                <select id="m_mode">
+                    <option value="">League / Reguler</option>
+                    <option value="cup">Cup / Knockout</option>
+                    <option value="derby">Derby</option>
+                    <option value="final">Final</option>
+                    <option value="title">Title Race</option>
+                    <option value="relegation">Zona Degradasi</option>
+                    <option value="intl">Antar Negara</option>
+                    <option value="friendly">Friendly</option>
+                </select>
+
+                <label>Importance (1–10)</label>
+                <input id="m_importance" type="number" min="1" max="10" step="0.1">
+
+                <label>Perkiraan Tempo Laga (1–10)</label>
+                <input id="m_tempo" type="number" min="1" max="10" step="0.1">
+
+                <label>Neutral Venue</label>
+                <select id="m_neutral">
+                    <option value="">Tidak / Home punya keuntungan normal</option>
+                    <option value="yes">Ya, venue netral</option>
+                </select>
+            </div>
+            <div class="col">
+                <label>Perkiraan Cuaca</label>
+                <select id="m_weather">
+                    <option value="">Normal</option>
+                    <option value="rain">Hujan</option>
+                    <option value="heavy_rain">Hujan Lebat</option>
+                    <option value="cold">Dingin</option>
+                    <option value="hot">Panas</option>
+                    <option value="windy">Berangin</option>
+                </select>
+
+                <label>Kondisi Lapangan</label>
+                <select id="m_pitch">
+                    <option value="">Normal</option>
+                    <option value="wet">Basah</option>
+                    <option value="heavy">Berat / Rusak</option>
+                </select>
+
+                <label>Catatan Singkat (opsional)</label>
+                <input id="m_note" type="text">
+            </div>
+        </div>
+
+        <div class="mini-text" style="margin-top:6px;">Preset Context (isi otomatis importance/tempo/chaos ringan, tetap bisa Anda edit):</div>
+        <div class="chip-group">
+            <button type="button" class="btn-ghost" id="preset_reguler">Preset Liga Reguler</button>
+            <button type="button" class="btn-ghost" id="preset_derby">Preset Derby Panas</button>
+            <button type="button" class="btn-ghost" id="preset_final">Preset Final / Title</button>
+            <button type="button" class="btn-ghost" id="preset_friendly">Preset Friendly Santai</button>
+        </div>
+    </div>
+
+    <!-- TACTICS & EXTRA FACTORS -->
+    <div class="section">
+        <div class="section-title">Taktik, Formasi Ganda, xThreat, Finishing & Psikologis</div>
+        <div class="row">
+            <div class="col">
+                <h4>Home – Formasi & Gaya</h4>
+                <label>Formasi Utama Home</label>
+                <input id="h_form1" type="text" placeholder="misal 4-2-3-1">
+
+                <label>Formasi Alternatif Home</label>
+                <input id="h_form2" type="text" placeholder="misal 4-3-3">
+
+                <label>Style Home</label>
+                <select id="h_style">
+                    <option value="">Tidak di-set</option>
+                    <option value="press">High Press / Gegenpress</option>
+                    <option value="counter">Counter Attack</option>
+                    <option value="possession">Possession / Build-up</option>
+                    <option value="direct">Direct Play</option>
+                    <option value="lowblock">Low/Mid Block</option>
+                </select>
+
+                <label>Pressing Intensity Home (1–10)</label>
+                <input id="h_press" type="number" min="1" max="10" step="0.5">
+
+                <label>Defensive Line Home (1–10)</label>
+                <input id="h_defline" type="number" min="1" max="10" step="0.5">
+            </div>
+
+            <div class="col">
+                <h4>Away – Formasi & Gaya</h4>
+                <label>Formasi Utama Away</label>
+                <input id="a_form1" type="text" placeholder="misal 4-4-2">
+
+                <label>Formasi Alternatif Away</label>
+                <input id="a_form2" type="text" placeholder="misal 4-3-3">
+
+                <label>Style Away</label>
+                <select id="a_style">
+                    <option value="">Tidak di-set</option>
+                    <option value="press">High Press / Gegenpress</option>
+                    <option value="counter">Counter Attack</option>
+                    <option value="possession">Possession / Build-up</option>
+                    <option value="direct">Direct Play</option>
+                    <option value="lowblock">Low/Mid Block</option>
+                </select>
+
+                <label>Pressing Intensity Away (1–10)</label>
+                <input id="a_press" type="number" min="1" max="10" step="0.5">
+
+                <label>Defensive Line Away (1–10)</label>
+                <input id="a_defline" type="number" min="1" max="10" step="0.5">
+            </div>
+
+            <div class="col">
+                <h4>xThreat, Finishing & Psikologis</h4>
+                <label>xThreat (xT) Home (0–10)</label>
+                <input id="h_xt" type="number" min="0" max="10" step="0.5">
+
+                <label>xThreat (xT) Away (0–10)</label>
+                <input id="a_xt" type="number" min="0" max="10" step="0.5">
+
+                <label>Finishing Quality (0–10, 10 = paling klinis)</label>
+                <input id="finishing" type="number" min="0" max="10" step="0.5">
+
+                <label>Psychology: Motivation (0–10)</label>
+                <input id="psy_mot" type="number" min="0" max="10" step="0.5">
+
+                <label>Psychology: Pressure Resistance (0–10)</label>
+                <input id="psy_press" type="number" min="0" max="10" step="0.5">
+
+                <label>Psychology: Crowd Intensity (0–10)</label>
+                <input id="psy_crowd" type="number" min="0" max="10" step="0.5">
+            </div>
+        </div>
+        <div class="mini-text">
+            Formasi ditulis bebas (contoh: 4-3-3, 4-2-3-1, 3-4-2-1, 5-4-1, dll). Engine akan membaca dua formasi per tim, menghitung fleksibilitas taktik, dan menyesuaikan tempo/chaos/λ otomatis.
+        </div>
+    </div>
+
+    <!-- H2H -->
+    <div class="section">
+        <div class="section-title">H2H (Head-to-Head Berdasarkan Skor yang Anda Isi)</div>
+        <p class="mini-text">
+            Format: satu baris satu skor Home-Away. Contoh cara tulis: 2-1, 1-1, 0-0 (ini hanya contoh format, bukan data default).
+        </p>
+        <label>H2H Skor</label>
+        <textarea id="h2h_input"></textarea>
+        <div class="chip-group">
+            <button type="button" class="btn-secondary" id="btn_h2h_parse">Hitung H2H</button>
+            <button type="button" class="btn-ghost" id="btn_h2h_clear">Reset H2H</button>
+        </div>
+        <div id="h2h_result" class="mini-text" style="margin-top:4px;"></div>
+    </div>
+
+    <!-- TEAM & ABSENCE -->
+    <div class="section">
+        <div class="section-title">Statistik Tim & Absensi (Pure Input)</div>
+        <div class="row">
+            <div class="col">
+                <h4>Home</h4>
+                <label>Nama Tim</label>
+                <input id="h_name" type="text">
+
+                <label>GPG (Gol dicetak per laga)</label>
+                <input id="h_gpg" type="number" step="0.01" min="0">
+
+                <label>GC (Gol kebobolan per laga)</label>
+                <input id="h_gc" type="number" step="0.01" min="0">
+
+                <label>xG For per laga</label>
+                <input id="h_xg" type="number" step="0.01" min="0">
+
+                <label>xGA per laga</label>
+                <input id="h_xga" type="number" step="0.01" min="0">
+
+                <label>Form (misal WWDLW)</label>
+                <input id="h_form" type="text">
+
+                <div class="chip-group">
+                    <button type="button" class="btn-ghost" id="btn_h_form_calc">Hitung Rating Form Home</button>
+                </div>
+                <div id="h_form_info" class="mini-text"></div>
+
+                <label>Quality Rating (1–10)</label>
+                <input id="h_quality" type="number" step="0.1" min="1" max="10">
+
+                <label>Stability Rating (1–10)</label>
+                <input id="h_stab" type="number" step="0.1" min="1" max="10">
+            </div>
+
+            <div class="col">
+                <h4>Away</h4>
+                <label>Nama Tim</label>
+                <input id="a_name" type="text">
+
+                <label>GPG (Gol dicetak per laga)</label>
+                <input id="a_gpg" type="number" step="0.01" min="0">
+
+                <label>GC (Gol kebobolan per laga)</label>
+                <input id="a_gc" type="number" step="0.01" min="0">
+
+                <label>xG For per laga</label>
+                <input id="a_xg" type="number" step="0.01" min="0">
+
+                <label>xGA per laga</label>
+                <input id="a_xga" type="number" step="0.01" min="0">
+
+                <label>Form (misal LWDWW)</label>
+                <input id="a_form" type="text">
+
+                <div class="chip-group">
+                    <button type="button" class="btn-ghost" id="btn_a_form_calc">Hitung Rating Form Away</button>
+                </div>
+                <div id="a_form_info" class="mini-text"></div>
+
+                <label>Quality Rating (1–10)</label>
+                <input id="a_quality" type="number" step="0.1" min="1" max="10">
+
+                <label>Stability Rating (1–10)</label>
+                <input id="a_stab" type="number" step="0.1" min="1" max="10">
+            </div>
+
+            <div class="col">
+                <h4>Absensi Pemain (Cedera/Suspend)</h4>
+                <p class="mini-text">Isi jumlah pemain absen per lini. Jika tidak tahu, isi 0.</p>
+
+                <label>Home – GK absen</label>
+                <input id="h_abs_gk" type="number" min="0" max="10" step="1">
+
+                <label>Home – DF absen</label>
+                <input id="h_abs_df" type="number" min="0" max="10" step="1">
+
+                <label>Home – MD absen</label>
+                <input id="h_abs_md" type="number" min="0" max="10" step="1">
+
+                <label>Home – FW absen</label>
+                <input id="h_abs_fw" type="number" min="0" max="10" step="1">
+
+                <label>Away – GK absen</label>
+                <input id="a_abs_gk" type="number" min="0" max="10" step="1">
+
+                <label>Away – DF absen</label>
+                <input id="a_abs_df" type="number" min="0" max="10" step="1">
+
+                <label>Away – MD absen</label>
+                <input id="a_abs_md" type="number" min="0" max="10" step="1">
+
+                <label>Away – FW absen</label>
+                <input id="a_abs_fw" type="number" min="0" max="10" step="1">
+
+                <div class="chip-group" style="margin-top:4px;">
+                    <button type="button" class="btn-ghost" id="btn_abs_calc">Ringkasan Dampak Absensi</button>
+                </div>
+                <div id="abs_info" class="mini-text"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SIM SETTINGS -->
+    <div class="section">
+        <div class="section-title">Pengaturan Monte Carlo & Anti-Bias</div>
+        <div class="row">
+            <div class="col">
+                <label>Jumlah Simulasi Monte Carlo</label>
+                <input id="sim_count" type="number" min="1000" max="100000" step="1000">
+
+                <label>Batas Skor Matrix (0 sampai nilai ini)</label>
+                <input id="score_cap" type="number" min="3" max="8" step="1">
+            </div>
+            <div class="col">
+                <label>Level Anti-Bias Probabilitas 1X2</label>
+                <select id="bias_level">
+                    <option value="soft">Soft (tajam, tetap netral)</option>
+                    <option value="medium">Medium</option>
+                    <option value="strong">Strong (aman)</option>
+                    <option value="ultra">Ultra (paling konservatif)</option>
+                </select>
+
+                <div class="mini-text" style="margin-top:8px;">
+                    Anti-bias hanya mengurangi ekstrem (misal >75%) supaya tidak berlebihan.
+                    Tidak memaksa siapa pun menang.
+                </div>
+            </div>
+            <div class="col">
+                <label>Preset Simulasi Cepat</label>
+                <div class="chip-group">
+                    <button type="button" class="btn-ghost" id="preset_sim_fast">Cepat (10.000)</button>
+                    <button type="button" class="btn-ghost" id="preset_sim_std">Standar (20.000)</button>
+                    <button type="button" class="btn-ghost" id="preset_sim_max">Maksimal (50.000)</button>
+                </div>
+                <div class="mini-text">
+                    Score cap default: 5 (0–0 sampai 5–5). Bisa Anda naikkan jika mau.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- RESULT -->
+    <div class="section">
+        <div class="section-title">Hasil Analisis v1500</div>
+        <p class="mini-text">
+            Model menghitung probabilitas dengan kombinasi Poisson + Monte Carlo + faktor taktik/xThreat/finishing/psikologis.
+            Semua berdasarkan input Anda, tanpa data default dan tanpa condong ke sisi manapun.
+        </p>
+        <button type="button" class="btn-primary" id="btn_analyze">ANALYZE v1500</button>
+        <button type="button" class="btn-secondary" id="btn_clear" style="margin-left:8px;">CLEAR</button>
+
+        <pre id="result_panel">
+Belum ada analisis.
+Isi statistik, context, H2H (opsional), taktik & formasi (opsional), lalu klik ANALYZE v1500.
+        </pre>
+
+        <div class="row" style="margin-top:12px;">
+            <div class="col">
+                <canvas id="v1500_radar" width="280" height="220"></canvas>
+            </div>
+            <div class="col">
+                <canvas id="v1500_balance" width="280" height="80"></canvas>
+            </div>
+        </div>
+        <div style="margin-top:14px;">
+          <div class="section-title" style="font-size:14px;">Score Probability Matrix (0–0 sampai cap–cap)</div>
+
+            <div id="score_matrix_wrap" class="mini-text">
+
+                Belum ada matrix. Jalankan ANALYZE untuk melihat distribusi skor simulasi.
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div><!-- /container -->
+
+
+
+<script>
+
+// ============================
+
+// v1500 CORE ENGINE (Multi-Formation)
+
+// ============================
+
+const V1500 = {};
+
+
+
+V1500.num = v => {
+
+    const n = parseFloat(v);
+
+    return Number.isFinite(n) ? n : 0;
+
+};
+
+V1500.clamp = (v,min,max) => Math.min(max,Math.max(min,v));
+
+V1500.str = v => (v === undefined || v === null) ? "" : String(v);
+
+
+
+// Poisson
+
+V1500.poisson = function(lambda,k){
+
+    lambda = Math.max(lambda,0);
+
+    if (k<0) return 0;
+
+    let res = Math.exp(-lambda);
+
+    for(let i=1;i<=k;i++) res *= lambda/i;
+
+    return res;
+
+};
+
+V1500.samplePoisson = function(lambda){
+
+    if (lambda<=0) return 0;
+
+    const L = Math.exp(-lambda);
+
+    let p = 1.0, k = 0;
+
+    do { k++; p *= Math.random(); } while(p > L);
+
+    return k-1;
+
+};
+
+
+
+// H2H
+
+V1500.parseH2H = function(raw){
+
+    const text = V1500.str(raw).trim();
+
+    if (!text) return {homeAvg:0,awayAvg:0,totalAvg:0,n:0,trend:"NETRAL"};
+
+    const lines = text.split(/\n+/);
+
+    let H=0,A=0,n=0;
+
+    for(const lineRaw of lines){
+
+        const line=lineRaw.replace(/\s+/g,"");
+
+        if (!line) continue;
+
+        const parts=line.split("-");
+
+        if (parts.length!==2) continue;
+
+        const h=V1500.num(parts[0]);
+
+        const a=V1500.num(parts[1]);
+
+        if (!Number.isFinite(h) || !Number.isFinite(a)) continue;
+
+        H+=h;A+=a;n++;
+
+    }
+
+    if (!n) return {homeAvg:0,awayAvg:0,totalAvg:0,n:0,trend:"NETRAL"};
+
+    const homeAvg=H/n, awayAvg=A/n, totalAvg=homeAvg+awayAvg;
+
+    let trend="NETRAL";
+
+    if (totalAvg>=3.2) trend="CENDERUNG BANYAK GOL (historis)";
+
+    else if (totalAvg<=2.0) trend="CENDERUNG SEDIKIT GOL (historis)";
+
+    return {homeAvg,awayAvg,totalAvg,n,trend};
+
+};
+
+
+
+// Absence
+
+V1500.absenceImpact = function(gk,df,md,fw){
+
+    gk=V1500.clamp(V1500.num(gk),0,10);
+
+    df=V1500.clamp(V1500.num(df),0,10);
+
+    md=V1500.clamp(V1500.num(md),0,10);
+
+    fw=V1500.clamp(V1500.num(fw),0,10);
+
+    const score=gk*3+df*1.5+md*1.3+fw*1.7;
+
+    const severity=V1500.clamp(score/3.5,0,10);
+
+    const atkDrop=-0.018*(md+fw)-0.03*fw;
+
+    const defDrop=-0.02*df-0.045*gk;
+
+    return {
+
+        severity,
+
+        atkMult:1+V1500.clamp(atkDrop,-0.35,0),
+
+        defMult:1+V1500.clamp(defDrop,-0.35,0)
+
+    };
+
+};
+
+
+
+// Form rating
+
+V1500.formRating = function(formStr){
+
+    const f=V1500.str(formStr).toUpperCase().replace(/\s+/g,"");
+
+    if (!f) return {score:5,momentum:0};
+
+    let score=5,momentum=0,last=null;
+
+    for(const c of f){
+
+        if (c==="W"){
+
+            score+=0.8;
+
+            if (last==="W") momentum+=0.5;
+
+            else if (last==="L") momentum+=0.7;
+
+            last="W";
+
+        } else if (c==="D"){
+
+            score+=0.3;
+
+            if (last==="W") momentum-=0.2;
+
+            last="D";
+
+        } else if (c==="L"){
+
+            score-=0.8;
+
+            if (last==="L") momentum-=0.5;
+
+            else if (last==="W") momentum-=0.7;
+
+            last="L";
+
+        }
+
+    }
+
+    return {
+
+        score:V1500.clamp(score,1,10),
+
+        momentum:V1500.clamp(momentum,-3,3)
+
+    };
+
+};
+
+
+
+// Team build
+
+V1500.buildTeam = function(raw,abs){
+
+    const gpg=V1500.num(raw.gpg);
+
+    const gc =V1500.num(raw.gc);
+
+    const xg =V1500.num(raw.xg);
+
+    const xga=V1500.num(raw.xga);
+
+
+
+    let quality  =V1500.num(raw.quality);
+
+    let stability=V1500.num(raw.stab);
+
+    if (quality<=0) quality=5;
+
+    if (stability<=0) stability=5;
+
+    quality  =V1500.clamp(quality,1,10);
+
+    stability=V1500.clamp(stability,1,10);
+
+
+
+    const frm=V1500.formRating(raw.form);
+
+    const formScore=frm.score;
+
+    const momentum =frm.momentum;
+
+
+
+    const xgEff = xg>0 ? xg : gpg;
+
+    const xgaEff= xga>0? xga: gc;
+
+
+
+    const atkBase=(gpg*0.35)+(xgEff*0.65);
+
+    const defBase=((2.2-gc)*0.45)+((1.5-xgaEff)*0.55);
+
+
+
+    let atk=V1500.clamp(atkBase/3.0,0.05,1.8);
+
+    let def=V1500.clamp(defBase/3.0,0.05,1.8);
+
+
+
+    const qAdj=(quality-5)/20;
+
+    const sAdj=(stability-5)/22;
+
+    const fAdj=(formScore-5)/22;
+
+    const mAdj=momentum/20;
+
+
+
+    atk*=(1+qAdj+0.5*sAdj+0.6*fAdj+0.4*mAdj);
+
+    def*=(1+sAdj+0.4*qAdj+0.4*fAdj+0.3*mAdj);
+
+
+
+    atk*=abs.atkMult;
+
+    def*=abs.defMult;
+
+
+
+    atk=V1500.clamp(atk,0.1,2.1);
+
+    def=V1500.clamp(def,0.1,2.1);
+
+
+
+    return {
+
+        gpg,gc,xg:xgEff,xga:xgaEff,
+
+        quality,stability,formScore,momentum,
+
+        attackIdx:atk,
+
+        defenseIdx:def,
+
+        absence:abs
+
+    };
+
+};
+
+
+
+// ===== Formation parser & flexibility (BARU) =====
+
+V1500.parseFormationString = function(str){
+
+    const s = V1500.str(str).replace(/\s+/g,"");
+
+    if (!s) return {valid:false,offLevel:0.5,defBias:0.5};
+
+    const parts = s.split("-");
+
+    const nums=[];
+
+    for(const p of parts){
+
+        const n=parseInt(p,10);
+
+        if (!Number.isFinite(n) || n<=0 || n>10) continue;
+
+        nums.push(n);
+
+    }
+
+    if (!nums.length) return {valid:false,offLevel:0.5,defBias:0.5};
+
+    const defLine=nums[0];
+
+    const attLine=nums[nums.length-1];
+
+    let mid=0;
+
+    if (nums.length>2){
+
+        for(let i=1;i<nums.length-1;i++) mid+=nums[i];
+
+    }
+
+    let rawOff = attLine*1.0 + mid*0.3 - defLine*0.5;
+
+    // normalisasi kasar jadi 0..1
+
+    rawOff = (rawOff - 0.5)/5;
+
+    const offLevel = V1500.clamp(rawOff+0.5,0,1);
+
+
+
+    let rawDef = defLine*0.7 - attLine*0.3;
+
+    rawDef = (rawDef - 0.5)/4;
+
+    const defBias = V1500.clamp(rawDef+0.5,0,1);
+
+
+
+    return {valid:true,offLevel,defBias};
+
+};
+
+
+
+V1500.formFlex = function(form1,form2){
+
+    const F1=V1500.parseFormationString(form1);
+
+    const F2=V1500.parseFormationString(form2);
+
+    if (!F1.valid && !F2.valid) return {baseOff:0.5,flex:0};
+
+    if (F1.valid && !F2.valid) return {baseOff:F1.offLevel,flex:0};
+
+    if (!F1.valid && F2.valid) return {baseOff:F2.offLevel,flex:0};
+
+    const flex=Math.abs(F1.offLevel-F2.offLevel);
+
+    const baseOff=(F1.offLevel+F2.offLevel)/2;
+
+    return {baseOff,flex};
+
+};
+
+
+
+// Context (mode+weather+pitch+taktik+xT+psikologis+multi-formasi)
+
+V1500.buildContext = function(raw,h2h,extra){
+
+    const mode    = V1500.str(raw.mode).toLowerCase();
+
+    const weather = V1500.str(raw.weather).toLowerCase();
+
+    const pitch   = V1500.str(raw.pitch).toLowerCase();
+
+    const neutral = V1500.str(raw.neutral).toLowerCase()==="yes";
+
+
+
+    let importance=5;
+
+    if (mode==="cup") importance=7;
+
+    else if (mode==="derby") importance=8;
+
+    else if (mode==="final") importance=9;
+
+    else if (mode==="title") importance=9;
+
+    else if (mode==="relegation") importance=8.5;
+
+    else if (mode==="intl") importance=7.5;
+
+    else if (mode==="friendly") importance=4.5;
+
+
+
+    const impOverride=V1500.num(raw.importance);
+
+    if (impOverride>0) importance=V1500.clamp(impOverride,1,10);
+
+
+
+    let tempo=6;
+
+    const tUser=V1500.num(raw.tempo);
+
+    if (tUser>0) tempo=V1500.clamp(tUser,1,10);
+
+
+
+    if (weather==="rain") tempo-=0.2;
+
+    else if (weather==="heavy_rain") tempo-=0.6;
+
+    else if (weather==="cold") tempo-=0.2;
+
+    else if (weather==="hot") tempo-=0.2;
+
+    else if (weather==="windy") tempo-=0.2;
+
+
+
+    if (pitch==="wet") tempo-=0.3;
+
+    else if (pitch==="heavy") tempo-=0.7;
+
+
+
+    let chaos=5;
+
+    if (mode==="derby") chaos+=1;
+
+    if (mode==="final") chaos+=0.7;
+
+    if (mode==="relegation") chaos+=0.7;
+
+    if (mode==="friendly") chaos-=0.3;
+
+    if (h2h && h2h.n>0){
+
+        if (h2h.totalAvg>=3) chaos+=0.2;
+
+        else if (h2h.totalAvg<=2) chaos-=0.2;
+
+    }
+
+
+
+    // xThreat & psikologis & pressing
+
+    const h_xt=V1500.clamp(extra.h_xt,0,10);
+
+    const a_xt=V1500.clamp(extra.a_xt,0,10);
+
+    const xtAvg=(h_xt+a_xt)/2;
+
+    const finishing=V1500.clamp(extra.finishing,0,10);
+
+    const psyMot   =V1500.clamp(extra.psy_mot,0,10);
+
+    const psyPress =V1500.clamp(extra.psy_press,0,10);
+
+    const psyCrowd =V1500.clamp(extra.psy_crowd,0,10);
+
+
+
+    const pressAvg=(extra.h_press+extra.a_press)/2;
+
+    const styleChaosBoost =
+
+        (extra.h_style==="press" || extra.a_style==="press" ||
+
+         extra.h_style==="counter" || extra.a_style==="counter") ? 0.5 : 0;
+
+
+
+       // Multi-formation flexibility
+
+    const hFlex = V1500.formFlex(extra.h_form1,extra.h_form2);
+
+    const aFlex = V1500.formFlex(extra.a_form1,extra.a_form2);
+
+    const offAvg = (hFlex.baseOff+aFlex.baseOff)/2;
+
+    const flexTotal = hFlex.flex + aFlex.flex;
+
+
+
+    // Base dari taktik & xT & psych
+
+    tempo += (pressAvg-5)*0.12;
+
+    chaos += styleChaosBoost;
+
+    chaos += (psyCrowd-5)*0.08;
+
+    importance += (psyMot-5)*0.06;
+
+    tempo += (xtAvg-5)*0.08;
+
+    tempo += (finishing-5)*0.05;
+
+
+
+    // Penyesuaian dari offensive level formasi (0..1 → shift sekitar -0.5..0.5)
+
+    tempo += (offAvg-0.5)*1.0;
+
+    chaos += flexTotal*0.35;
+
+
+
+    tempo=V1500.clamp(tempo,2.5,9.5);
+
+    chaos=V1500.clamp(chaos,2.5,9.5);
+
+    importance=V1500.clamp(importance,1,10);
+
+
+
+    const homeAdv = neutral ? 0.05 : 0.28;
+
+
+
+    return {
+
+        mode,weather,pitch,
+
+        importance,
+
+        tempo,
+
+        chaos,
+
+        homeAdv,
+
+        neutralSite:neutral,
+
+        extras:Object.assign({},extra,{hFlex,aFlex,offAvg,flexTotal})
+
+    };
+
+};
+
+
+
+// Lambda (tidak condong, tapi baca context & xT)
+
+V1500.buildLambda = function(home,away,ctx,h2h,extra){
+
+    const baseHome = home.gpg*0.4 + home.xg*0.6;
+
+    const baseAway = away.gpg*0.4 + away.xg*0.6;
+
+
+
+    let lamH = baseHome * home.attackIdx * away.defenseIdx;
+
+    let lamA = baseAway * away.attackIdx * home.defenseIdx;
+
+
+
+    if (h2h && h2h.n>0){
+
+        const hFactor=1+V1500.clamp((h2h.homeAvg-1.5)*0.06,-0.18,0.18);
+
+        const aFactor=1+V1500.clamp((h2h.awayAvg-1.2)*0.06,-0.18,0.18);
+
+        lamH*=hFactor;
+
+        lamA*=aFactor;
+
+    }
+
+
+
+    const tempoFactor = 1 + (ctx.tempo-6)*0.03;
+
+    const impFactor   = 1 + (ctx.importance-5)*0.025;
+
+    const chaosFactor = 1 + (ctx.chaos-5)*0.03;
+
+
+
+    lamH *= tempoFactor*impFactor*chaosFactor;
+
+    lamA *= tempoFactor*impFactor*chaosFactor;
+
+
+
+    lamH *= (1 + ctx.homeAdv*0.28);
+
+    lamA *= (1 - ctx.homeAdv*0.12);
+
+
+
+    const xtDiff=(extra.h_xt-extra.a_xt)/10;
+
+    lamH *= (1 + xtDiff*0.1);
+
+    lamA *= (1 - xtDiff*0.1);
+
+
+
+    const finishing=V1500.clamp(extra.finishing,0,10);
+
+    lamH *= (1 + (finishing-5)*0.03);
+
+    lamA *= (1 + (finishing-5)*0.03);
+
+
+
+    lamH=V1500.clamp(lamH,0.2,3.8);
+
+    lamA=V1500.clamp(lamA,0.2,3.8);
+
+
+
+    const avg=(lamH+lamA)/2;
+
+    const diff=lamH-lamA;
+
+    const diffC=diff*0.7;
+
+    lamH=avg+diffC/2;
+
+    lamA=avg-diffC/2;
+
+
+
+    lamH=V1500.clamp(lamH,0.2,3.8);
+
+    lamA=V1500.clamp(lamA,0.2,3.8);
+
+
+
+    return {lamH,lamA};
+
+};
+
+
+
+// Deterministic Poisson
+
+V1500.detSim = function(lambda){
+
+    const maxG=7;
+
+    const lamH=lambda.lamH, lamA=lambda.lamA;
+
+    let pH=0,pD=0,pA=0,total=0;
+
+    let ou={"0.5":{over:0,under:0},"1.5":{over:0,under:0},"2.5":{over:0,under:0},"3.5":{over:0,under:0}};
+
+    for(let h=0;h<=maxG;h++){
+
+        const pPH=V1500.poisson(lamH,h);
+
+        for(let a=0;a<=maxG;a++){
+
+            const pPA=V1500.poisson(lamA,a);
+
+            const p=pPH*pPA;
+
+            total+=p;
+
+            if (h>a) pH+=p;
+
+            else if (h===a) pD+=p;
+
+            else pA+=p;
+
+            const sum=h+a;
+
+            if (sum>0) ou["0.5"].over+=p; else ou["0.5"].under+=p;
+
+            if (sum>1) ou["1.5"].over+=p; else ou["1.5"].under+=p;
+
+            if (sum>2) ou["2.5"].over+=p; else ou["2.5"].under+=p;
+
+            if (sum>3) ou["3.5"].over+=p; else ou["3.5"].under+=p;
+
+        }
+
+    }
+
+    if (total>0){
+
+        pH/=total;pD/=total;pA/=total;
+
+        for(const k of Object.keys(ou)){
+
+            ou[k].over/=total;ou[k].under/=total;
+
+        }
+
+    }
+
+    return {pH,pD,pA,ou};
+
+};
+
+
+
+// Monte Carlo
+
+V1500.monteCarlo = function(lambda,simCount,scoreCap){
+
+    simCount=V1500.clamp(simCount||20000,1000,100000);
+
+    scoreCap=V1500.clamp(scoreCap||5,3,8);
+
+    let homeWins=0,draws=0,awayWins=0,total=0,goalsTotal=0;
+
+    const matrix=[];
+
+    for(let h=0;h<=scoreCap;h++){
+
+        matrix[h]=[];
+
+        for(let a=0;a<=scoreCap;a++) matrix[h][a]=0;
+
+    }
+
+    for(let i=0;i<simCount;i++){
+
+        const h=V1500.samplePoisson(lambda.lamH);
+
+        const a=V1500.samplePoisson(lambda.lamA);
+
+        total++;goalsTotal+=(h+a);
+
+        if (h>a) homeWins++;
+
+        else if (h===a) draws++;
+
+        else awayWins++;
+
+        if (h<=scoreCap && a<=scoreCap) matrix[h][a]+=1;
+
+    }
+
+    const pH=homeWins/total,pD=draws/total,pA=awayWins/total;
+
+    const avgGoals=goalsTotal/total;
+
+
+
+    const lamTotal=lambda.lamH+lambda.lamA;
+
+    const lines=[0.5,1.5,2.5,3.5];
+
+    const ou={};
+
+    lines.forEach(line=>{
+
+        let under=0;
+
+        const cut=Math.floor(line);
+
+        for(let k=0;k<=cut;k++) under+=V1500.poisson(lamTotal,k);
+
+        const over=1-under;
+
+        ou[line.toString()]={over,under};
+
+    });
+
+    return {simCount,pH,pD,pA,avgGoals,matrix,scoreCap,ou};
+
+};
+
+
+
+// Anti-bias
+
+V1500.compress1x2 = function(pH,pD,pA,level){
+
+    function compress(x,c,f){return c+(x-c)*f;}
+
+    let factor=0.85;
+
+    if (level==="medium") factor=0.75;
+
+    else if (level==="strong") factor=0.65;
+
+    else if (level==="ultra") factor=0.55;
+
+    const c=1/3;
+
+    const cH=compress(pH,c,factor);
+
+    const cD=compress(pD,c,factor);
+
+    const cA=compress(pA,c,factor);
+
+    const s=cH+cD+cA;
+
+    return {pH:cH/s,pD:cD/s,pA:cA/s};
+
+};
+
+
+
+// Uncertainty
+
+V1500.uncertainty = function(pH,pD,pA){
+
+    const probs=[pH,pD,pA];
+
+    let entropy=0;
+
+    for(const p of probs){
+
+        if (p>0) entropy-=p*Math.log2(p);
+
+    }
+
+    const max=Math.log2(3);
+
+    const norm=max>0?entropy/max:0;
+
+    return {entropy,normEntropy:norm,uncertaintyScore:norm*100};
+
+};
+
+
+
+// Report
+
+V1500.report = function(input,homeTeam,awayTeam,ctx,h2h,det,mc,lambda,finalProb,unc){
+
+    const hName=V1500.str(input.hName)||"Home";
+
+    const aName=V1500.str(input.aName)||"Away";
+
+    const title=V1500.str(input.title)||"Match";
+
+    const league=V1500.str(input.league);
+
+    const date  =V1500.str(input.date);
+
+    const time  =V1500.str(input.time);
+
+
+
+    function pct(x){return (x*100).toFixed(1)+"%";}
+
+    function f1(x){return V1500.num(x).toFixed(1);}
+
+    function f2(x){return V1500.num(x).toFixed(2);}
+
+
+
+    const lines=[];
+
+    lines.push("=== "+title+" ===");
+
+    const info=[];
+
+    if (league) info.push("Kompetisi: "+league);
+
+    if (date) info.push("Tanggal: "+date);
+
+    if (time) info.push("Kick-off: "+time);
+
+    if (info.length) lines.push(info.join(" · "));
+
+    lines.push("Mode: "+(input.mode||"League/Reguler")+
+
+        " · Cuaca: "+(input.weather||"Normal")+
+
+        " · Lapangan: "+(input.pitch||"Normal")+
+
+        (ctx.neutralSite?" · Venue: Netral":""));
+
+    if (input.note) lines.push("Catatan: "+input.note);
+
+
+
+    lines.push("");
+
+    lines.push("--- Profil Tim (dari input Anda) ---");
+
+    lines.push(hName+" → GPG: "+f2(homeTeam.gpg)+
+
+        " · GC: "+f2(homeTeam.gc)+
+
+        " · xG: "+f2(homeTeam.xg)+
+
+        " · xGA: "+f2(homeTeam.xga)+
+
+        " · Quality: "+f1(homeTeam.quality)+
+
+        " · Stability: "+f1(homeTeam.stability)+
+
+        " · FormRating: "+f1(homeTeam.formScore)+
+
+        " · Momentum: "+f1(homeTeam.momentum));
+
+    lines.push(aName+" → GPG: "+f2(awayTeam.gpg)+
+
+        " · GC: "+f2(awayTeam.gc)+
+
+        " · xG: "+f2(awayTeam.xg)+
+
+        " · xGA: "+f2(awayTeam.xga)+
+
+        " · Quality: "+f1(awayTeam.quality)+
+
+        " · Stability: "+f1(awayTeam.stability)+
+
+        " · FormRating: "+f1(awayTeam.formScore)+
+
+        " · Momentum: "+f1(awayTeam.momentum));
+
+
+
+    lines.push("");
+
+    lines.push("--- Absensi & Dampaknya ---");
+
+    lines.push(hName+" → Severity: "+f1(homeTeam.absence.severity)+"/10");
+
+    lines.push(aName+" → Severity: "+f1(awayTeam.absence.severity)+"/10");
+
+
+
+    lines.push("");
+
+    lines.push("--- H2H (berdasarkan skor yang Anda masukkan) ---");
+
+    if (!h2h.n){
+
+        lines.push("Tidak ada data H2H valid (boleh dikosongkan).");
+
+    } else {
+
+        lines.push("Jumlah sample: "+h2h.n+
+
+            " · Rata-rata gol → "+hName+": "+f2(h2h.homeAvg)+
+
+            " / "+aName+": "+f2(h2h.awayAvg)+
+
+            " · Total: "+f2(h2h.totalAvg));
+
+        lines.push("Pola historis: "+h2h.trend);
+
+    }
+
+
+
+    lines.push("");
+
+    lines.push("--- Context & Faktor Tambahan ---");
+
+    lines.push("Tempo: "+f1(ctx.tempo)+"/10 · Chaos: "+f1(ctx.chaos)+"/10 · Importance: "+f1(ctx.importance)+"/10"+
+
+        " · HomeAdv: "+f2(ctx.homeAdv));
+
+    lines.push("xThreat Home/Away: "+f1(ctx.extras.h_xt)+" / "+f1(ctx.extras.a_xt)+
+
+        " · Finishing Quality: "+f1(ctx.extras.finishing)+"/10");
+
+    lines.push("Psychology → Motivation: "+f1(ctx.extras.psy_mot)+
+
+        " · PressureResist: "+f1(ctx.extras.psy_press)+
+
+        " · CrowdIntensity: "+f1(ctx.extras.psy_crowd));
+
+    lines.push("Multi-formasi → Home Flex: "+f2(ctx.extras.hFlex.flex)+
+
+        " · Away Flex: "+f2(ctx.extras.aFlex.flex));
+
+
+
+    lines.push("");
+
+    lines.push("--- Expected Goals (lambda) ---");
+
+    lines.push(hName+" λ: "+f2(lambda.lamH));
+
+    lines.push(aName+" λ: "+f2(lambda.lamA));
+
+
+
+    lines.push("");
+
+    lines.push("--- Deterministic Poisson (teoritis) ---");
+
+    lines.push("1X2 (sebelum anti-bias):");
+
+    lines.push("  "+hName+" menang : "+pct(det.pH));
+
+    lines.push("  Seri              : "+pct(det.pD));
+
+    lines.push("  "+aName+" menang : "+pct(det.pA));
+
+    lines.push("Over/Under 2.5 (teoritis): Over "+pct(det.ou["2.5"].over)+
+
+        " · Under "+pct(det.ou["2.5"].under));
+
+
+
+    lines.push("");
+
+    lines.push("--- Monte Carlo Simulation ---");
+
+    lines.push("Simulasi: "+mc.simCount+" run · Rata-rata total gol: "+f2(mc.avgGoals));
+
+    lines.push("1X2 dari simulasi (raw):");
+
+    lines.push("  "+hName+" menang : "+pct(mc.pH));
+
+    lines.push("  Seri              : "+pct(mc.pD));
+
+    lines.push("  "+aName+" menang : "+pct(mc.pA));
+
+
+
+    lines.push("");
+
+    lines.push("--- Probabilitas Akhir 1X2 (gabungan + anti-bias, tetap netral) ---");
+
+    lines.push("  "+hName+" menang : "+pct(finalProb.pH));
+
+    lines.push("  Seri              : "+pct(finalProb.pD));
+
+    lines.push("  "+aName+" menang : "+pct(finalProb.pA));
+
+
+
+    lines.push("");
+
+    lines.push("--- Gambaran Total Gol (dari simulasi) ---");
+
+    lines.push("Line 0.5 → Over: "+pct(mc.ou["0.5"].over)+" · Under: "+pct(mc.ou["0.5"].under));
+
+    lines.push("Line 1.5 → Over: "+pct(mc.ou["1.5"].over)+" · Under: "+pct(mc.ou["1.5"].under));
+
+    lines.push("Line 2.5 → Over: "+pct(mc.ou["2.5"].over)+" · Under: "+pct(mc.ou["2.5"].under));
+
+    lines.push("Line 3.5 → Over: "+pct(mc.ou["3.5"].over)+" · Under: "+pct(mc.ou["3.5"].under));
+
+
+
+    lines.push("");
+
+    lines.push("--- Uncertainty Index ---");
+
+    lines.push("Entropy: "+f2(unc.entropy)+
+
+        " · Normalized: "+f2(unc.normEntropy*100)+"%");
+
+    lines.push("Uncertainty Score (0 = sangat yakin, 100 = sangat tidak pasti): "+f1(unc.uncertaintyScore));
+
+
+
+    lines.push("");
+
+    lines.push("Catatan:");
+
+    lines.push("- Semua angka di atas murni dari input yang Anda isi (statistik, H2H, formasi, xThreat, psikologi, dll.).");
+
+    lines.push("- Tidak ada odds, tidak ada data klub/liga default, tidak ada contoh nilai tersembunyi di script.");
+
+    lines.push("- Model tidak diarahkan condong ke Home/Away ataupun Over/Under. Anti-bias hanya mencegah probabilitas ekstrem.");
+
+
+
+    return lines.join("\n");
+
+};
+
+
+
+// Radar
+
+V1500.renderRadar = function(id,homeTeam,awayTeam){
+
+    const c=document.getElementById(id); if(!c) return;
+
+    const ctx=c.getContext("2d");
+
+    const W=c.width,H=c.height,CX=W/2,CY=H/2,R=Math.min(W,H)*0.38;
+
+    ctx.clearRect(0,0,W,H);
+
+    const labels=["Atk","Def","Qual","Stab"];
+
+    const valsH=[
+
+        V1500.clamp(homeTeam.attackIdx/2,0,1),
+
+        V1500.clamp(homeTeam.defenseIdx/2,0,1),
+
+        homeTeam.quality/10,
+
+        homeTeam.stability/10
+
+    ];
+
+    const valsA=[
+
+        V1500.clamp(awayTeam.attackIdx/2,0,1),
+
+        V1500.clamp(awayTeam.defenseIdx/2,0,1),
+
+        awayTeam.quality/10,
+
+        awayTeam.stability/10
+
+    ];
+
+    const axis=labels.length;
+
+
+
+    ctx.strokeStyle="#888";ctx.globalAlpha=0.5;
+
+    for(let r=1;r<=4;r++){
+
+        const rr=(R/4)*r;
+
+        ctx.beginPath();
+
+        for(let i=0;i<axis;i++){
+
+            const ang=(Math.PI*2/axis)*i - Math.PI/2;
+
+            const x=CX+rr*Math.cos(ang);
+
+            const y=CY+rr*Math.sin(ang);
+
+            if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+
+        }
+
+        ctx.closePath();ctx.stroke();
+
+    }
+
+    ctx.globalAlpha=1;
+
+
+
+    ctx.font="10px Arial";ctx.fillStyle="#888";ctx.strokeStyle="#777";
+
+    for(let i=0;i<axis;i++){
+
+        const ang=(Math.PI*2/axis)*i - Math.PI/2;
+
+        const x=CX+R*Math.cos(ang);
+
+        const y=CY+R*Math.sin(ang);
+
+        ctx.beginPath();ctx.moveTo(CX,CY);ctx.lineTo(x,y);ctx.stroke();
+
+        ctx.fillText(labels[i],x-12,y-4);
+
+    }
+
+   function draw(vals,stroke,fillAlpha){
+
+        ctx.beginPath();
+
+        for(let i=0;i<axis;i++){
+
+            const ang=(Math.PI*2/axis)*i - Math.PI/2;
+
+            const r=R*vals[i];
+
+            const x=CX+r*Math.cos(ang);
+
+            const y=CY+r*Math.sin(ang);
+
+            if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+
+        }
+
+        ctx.closePath();
+
+        ctx.strokeStyle=stroke;ctx.globalAlpha=1;ctx.stroke();
+
+        ctx.globalAlpha=fillAlpha;ctx.fillStyle=stroke;ctx.fill();ctx.globalAlpha=1;
+
+    }
+
+    draw(valsH,"#3366ff",0.2);
+
+    draw(valsA,"#ff5555",0.2);
+
+};
+
+
+
+// Attack balance
+
+V1500.renderBalance = function(id,homeTeam,awayTeam){
+
+    const c=document.getElementById(id); if(!c) return;
+
+    const ctx=c.getContext("2d");
+
+    const W=c.width,H=c.height;
+
+    ctx.clearRect(0,0,W,H);
+
+    const mid=W/2;
+
+    ctx.fillStyle="#999";ctx.fillRect(0,H/2-6,W,12);
+
+    const atkH=V1500.clamp(homeTeam.attackIdx/2,0,1);
+
+    const atkA=V1500.clamp(awayTeam.attackIdx/2,0,1);
+
+    ctx.fillStyle="#3366ff";ctx.fillRect(mid-atkH*mid,H/2-6,atkH*mid,12);
+
+    ctx.fillStyle="#ff5555";ctx.fillRect(mid,H/2-6,atkA*mid,12);
+
+    ctx.font="10px Arial";ctx.fillStyle="#ddd";
+
+    ctx.fillText("HOME ATK",6,14);
+
+    ctx.fillText("AWAY ATK",W-60,14);
+
+};
+
+
+
+// Score matrix
+
+V1500.renderScoreMatrix = function(containerId,matrix,cap,hName,aName){
+
+    const wrap=document.getElementById(containerId);if(!wrap)return;
+
+    if(!matrix){wrap.textContent="Belum ada matrix.";return;}
+
+    let total=0;
+
+    for(let h=0;h<=cap;h++){
+
+        for(let a=0;a<=cap;a++) total+=matrix[h][a];
+
+    }
+
+    let html="<table><thead><tr><th>"+hName+"\\ "+aName+"</th>";
+
+    for(let a=0;a<=cap;a++) html+="<th>"+a+"</th>";
+
+    html+="</tr></thead><tbody>";
+
+    for(let h=0;h<=cap;h++){
+
+        html+="<tr><th>"+h+"</th>";
+
+        for(let a=0;a<=cap;a++){
+
+            const c=matrix[h][a];
+
+            const p= total>0 ? (c/total*100) : 0;
+
+            html+="<td>"+p.toFixed(1)+"%</td>";
+
+        }
+
+        html+="</tr>";
+
+    }
+
+    html+="</tbody></table>";
+
+    wrap.innerHTML=html;
+
+};
+
+
+
+// Collect inputs
+
+function collectInputs(){
+
+    return {
+
+        title  : document.getElementById("m_title").value,
+
+        league : document.getElementById("m_league").value,
+
+        date   : document.getElementById("m_date").value,
+
+        time   : document.getElementById("m_time").value,
+
+        mode   : document.getElementById("m_mode").value,
+
+        importance: document.getElementById("m_importance").value,
+
+        tempo  : document.getElementById("m_tempo").value,
+
+        neutral: document.getElementById("m_neutral").value,
+
+        weather: document.getElementById("m_weather").value,
+
+        pitch  : document.getElementById("m_pitch").value,
+
+        note   : document.getElementById("m_note").value,
+
+
+
+        hName  : document.getElementById("h_name").value,
+
+        aName  : document.getElementById("a_name").value,
+
+
+
+        h_gpg  : document.getElementById("h_gpg").value,
+
+        h_gc   : document.getElementById("h_gc").value,
+
+        h_xg   : document.getElementById("h_xg").value,
+
+        h_xga  : document.getElementById("h_xga").value,
+
+        h_form : document.getElementById("h_form").value,
+
+        h_quality: document.getElementById("h_quality").value,
+
+        h_stab   : document.getElementById("h_stab").value,
+
+
+
+        a_gpg  : document.getElementById("a_gpg").value,
+
+        a_gc   : document.getElementById("a_gc").value,
+
+        a_xg   : document.getElementById("a_xg").value,
+
+        a_xga  : document.getElementById("a_xga").value,
+
+        a_form : document.getElementById("a_form").value,
+
+        a_quality: document.getElementById("a_quality").value,
+
+        a_stab   : document.getElementById("a_stab").value,
+
+
+
+        h_abs_gk: document.getElementById("h_abs_gk").value,
+
+        h_abs_df: document.getElementById("h_abs_df").value,
+
+        h_abs_md: document.getElementById("h_abs_md").value,
+
+        h_abs_fw: document.getElementById("h_abs_fw").value,
+
+
+
+        a_abs_gk: document.getElementById("a_abs_gk").value,
+
+        a_abs_df: document.getElementById("a_abs_df").value,
+
+        a_abs_md: document.getElementById("a_abs_md").value,
+
+        a_abs_fw: document.getElementById("a_abs_fw").value,
+
+
+
+        h_form1 : document.getElementById("h_form1").value,
+
+        h_form2 : document.getElementById("h_form2").value,
+
+        a_form1 : document.getElementById("a_form1").value,
+
+        a_form2 : document.getElementById("a_form2").value,
+
+        h_style : document.getElementById("h_style").value,
+
+        a_style : document.getElementById("a_style").value,
+
+        h_press : document.getElementById("h_press").value,
+
+        a_press : document.getElementById("a_press").value,
+
+        h_defline: document.getElementById("h_defline").value,
+
+        a_defline: document.getElementById("a_defline").value,
+
+
+
+        h_xt     : document.getElementById("h_xt").value,
+
+        a_xt     : document.getElementById("a_xt").value,
+
+        finishing: document.getElementById("finishing").value,
+
+        psy_mot  : document.getElementById("psy_mot").value,
+
+        psy_press: document.getElementById("psy_press").value,
+
+        psy_crowd: document.getElementById("psy_crowd").value,
+
+
+
+        h2h_raw  : document.getElementById("h2h_input").value,
+
+
+
+        simCount : document.getElementById("sim_count").value,
+
+        scoreCap : document.getElementById("score_cap").value,
+
+        biasLevel: document.getElementById("bias_level").value
+
+    };
+
+}
+
+
+
+// UI helpers
+
+function runH2HParse(){
+
+    const raw=document.getElementById("h2h_input").value;
+
+    const res=V1500.parseH2H(raw);
+
+    const el=document.getElementById("h2h_result");
+
+    if (!res.n){
+
+        el.textContent="H2H kosong atau format tidak terbaca.";
+
+    } else {
+
+        el.textContent="Sample: "+res.n+
+
+            " · Home AVG: "+res.homeAvg.toFixed(2)+
+
+            " · Away AVG: "+res.awayAvg.toFixed(2)+
+
+            " · Total AVG: "+res.totalAvg.toFixed(2)+
+
+            " · Tren: "+res.trend;
+
+    }
+
+}
+
+function runH2HClear(){
+
+    document.getElementById("h2h_input").value="";
+
+    document.getElementById("h2h_result").textContent="";
+
+}
+
+function calcFormInfo(side){
+
+    const fieldId=side==="h"?"h_form":"a_form";
+
+    const infoId =side==="h"?"h_form_info":"a_form_info";
+
+    const formStr=document.getElementById(fieldId).value;
+
+    const res=V1500.formRating(formStr);
+
+    document.getElementById(infoId).textContent=
+
+        "Form Rating: "+res.score.toFixed(1)+"/10 · Momentum: "+res.momentum.toFixed(1);
+
+}
+
+function calcAbsSummary(){
+
+    const inp=collectInputs();
+
+    const hAbs=V1500.absenceImpact(inp.h_abs_gk,inp.h_abs_df,inp.h_abs_md,inp.h_abs_fw);
+
+    const aAbs=V1500.absenceImpact(inp.a_abs_gk,inp.a_abs_df,inp.a_abs_md,inp.a_abs_fw);
+
+    document.getElementById("abs_info").textContent=
+
+        "Home Severity: "+hAbs.severity.toFixed(1)+"/10 · Away Severity: "+aAbs.severity.toFixed(1)+"/10";
+
+}
+
+
+
+// Presets
+
+function applyPresetContext(type){
+
+    const modeEl=document.getElementById("m_mode");
+
+    const imp=document.getElementById("m_importance");
+
+    const tmp=document.getElementById("m_tempo");
+
+    if(type==="reguler"){modeEl.value="";imp.value="6.0";tmp.value="6.5";}
+
+    else if(type==="derby"){modeEl.value="derby";imp.value="8.0";tmp.value="7.2";}
+
+    else if(type==="final"){modeEl.value="final";imp.value="9.0";tmp.value="6.8";}
+
+    else if(type==="friendly"){modeEl.value="friendly";imp.value="4.5";tmp.value="5.0";}
+
+}
+
+function applyPresetSim(type){
+
+    const sim=document.getElementById("sim_count");
+
+    const cap=document.getElementById("score_cap");
+
+    if(type==="fast"){sim.value="10000";cap.value="5";}
+
+    else if(type==="std"){sim.value="20000";cap.value="5";}
+
+    else if(type==="max"){sim.value="50000";cap.value="6";}
+
+}
+
+
+
+// Analyze
+
+function runAnalyze(){
+
+    const panel=document.getElementById("result_panel");
+
+    panel.textContent="Memproses v1500 Multi-Formation...\n";
+
+
+
+    const inp=collectInputs();
+
+    const h2h=V1500.parseH2H(inp.h2h_raw);
+
+
+
+    const absH=V1500.absenceImpact(inp.h_abs_gk,inp.h_abs_df,inp.h_abs_md,inp.h_abs_fw);
+
+    const absA=V1500.absenceImpact(inp.a_abs_gk,inp.a_abs_df,inp.a_abs_md,inp.a_abs_fw);
+
+
+
+    const homeTeam=V1500.buildTeam({
+
+        gpg:inp.h_gpg,gc:inp.h_gc,xg:inp.h_xg,xga:inp.h_xga,
+
+        quality:inp.h_quality,stab:inp.h_stab,form:inp.h_form
+
+    },absH);
+
+    const awayTeam=V1500.buildTeam({
+
+        gpg:inp.a_gpg,gc:inp.a_gc,xg:inp.a_xg,xga:inp.a_xga,
+
+        quality:inp.a_quality,stab:inp.a_stab,form:inp.a_form
+
+    },absA);
+
+
+
+    const extra={
+
+        h_form1:inp.h_form1,
+
+        h_form2:inp.h_form2,
+
+        a_form1:inp.a_form1,
+
+        a_form2:inp.a_form2,
+
+        h_style:inp.h_style,
+
+        a_style:inp.a_style,
+
+        h_press:V1500.num(inp.h_press),
+
+        a_press:V1500.num(inp.a_press),
+
+        h_defline:V1500.num(inp.h_defline),
+
+        a_defline:V1500.num(inp.a_defline),
+
+        h_xt:V1500.num(inp.h_xt),
+
+        a_xt:V1500.num(inp.a_xt),
+
+        finishing:V1500.num(inp.finishing),
+
+        psy_mot:V1500.num(inp.psy_mot),
+
+        psy_press:V1500.num(inp.psy_press),
+
+        psy_crowd:V1500.num(inp.psy_crowd)
+
+    };
+
+
+
+    const ctx=V1500.buildContext({
+
+        mode:inp.mode,
+
+        importance:inp.importance,
+
+        tempo:inp.tempo,
+
+        neutral:inp.neutral,
+
+        weather:inp.weather,
+
+        pitch:inp.pitch
+
+    },h2h,extra);
+
+const lambda=V1500.buildLambda(homeTeam,awayTeam,ctx,h2h,extra);
+
+    const det   =V1500.detSim(lambda);
+
+
+
+    const simCount=V1500.num(inp.simCount)||20000;
+
+    const scoreCap=V1500.num(inp.scoreCap)||5;
+
+    const mc      =V1500.monteCarlo(lambda,simCount,scoreCap);
+
+
+
+    let pH_mix=(det.pH+mc.pH)/2;
+
+    let pD_mix=(det.pD+mc.pD)/2;
+
+    let pA_mix=(det.pA+mc.pA)/2;
+
+    const sMix=pH_mix+pD_mix+pA_mix;
+
+    pH_mix/=sMix;pD_mix/=sMix;pA_mix/=sMix;
+
+
+
+    const biasLevel=inp.biasLevel||"soft";
+
+    const finalProb=V1500.compress1x2(pH_mix,pD_mix,pA_mix,biasLevel);
+
+    const unc=V1500.uncertainty(finalProb.pH,finalProb.pD,finalProb.pA);
+
+
+
+    const report=V1500.report({
+
+        title:inp.title,league:inp.league,date:inp.date,time:inp.time,
+
+        mode:inp.mode,weather:inp.weather,pitch:inp.pitch,note:inp.note,
+
+        hName:inp.hName,aName:inp.aName
+
+    },homeTeam,awayTeam,ctx,h2h,det,mc,lambda,finalProb,unc);
+
+
+
+    panel.textContent=report;
+
+
+
+    V1500.renderRadar("v1500_radar",homeTeam,awayTeam);
+
+    V1500.renderBalance("v1500_balance",homeTeam,awayTeam);
+
+    V1500.renderScoreMatrix("score_matrix_wrap",mc.matrix,mc.scoreCap,
+
+        inp.hName||"Home",inp.aName||"Away");
+
+}
+
+
+
+// Clear
+
+function clearAll(){
+
+    const ids=[
+
+        "m_title","m_league","m_date","m_time","m_importance","m_tempo","m_note",
+
+        "h_name","h_gpg","h_gc","h_xg","h_xga","h_form","h_quality","h_stab",
+
+        "a_name","a_gpg","a_gc","a_xg","a_xga","a_form","a_quality","a_stab",
+
+        "h_abs_gk","h_abs_df","h_abs_md","h_abs_fw",
+
+        "a_abs_gk","a_abs_df","a_abs_md","a_abs_fw",
+
+        "h_form1","h_form2","a_form1","a_form2",
+
+        "h_style","a_style",
+
+        "h_press","a_press","h_defline","a_defline",
+
+        "h_xt","a_xt","finishing",
+
+        "psy_mot","psy_press","psy_crowd",
+
+        "h2h_input","sim_count","score_cap"
+
+    ];
+
+    ids.forEach(id=>{
+
+        const el=document.getElementById(id);
+
+        if(el) el.value="";
+
+    });
+
+    document.getElementById("m_mode").value="";
+
+    document.getElementById("m_neutral").value="";
+
+    document.getElementById("m_weather").value="";
+
+    document.getElementById("m_pitch").value="";
+
+    document.getElementById("bias_level").value="soft";
+
+    document.getElementById("h2h_result").textContent="";
+
+    document.getElementById("h_form_info").textContent="";
+
+    document.getElementById("a_form_info").textContent="";
+
+    document.getElementById("abs_info").textContent="";
+
+    document.getElementById("score_matrix_wrap").textContent=
+
+        "Belum ada matrix. Jalankan ANALYZE untuk melihat distribusi skor simulasi.";
+
+    document.getElementById("result_panel").textContent=
+
+        "Belum ada analisis.\nIsi statistik, context, H2H (opsional), taktik & formasi (opsional), lalu klik ANALYZE v1500.";
+
+
+
+    const r=document.getElementById("v1500_radar");
+
+    if(r) r.getContext("2d").clearRect(0,0,r.width,r.height);
+
+    const b=document.getElementById("v1500_balance");
+
+    if(b) b.getContext("2d").clearRect(0,0,b.width,b.height);
+
+}
+
+
+
+document.addEventListener("DOMContentLoaded",()=>{
+
+    document.getElementById("btn_h2h_parse").addEventListener("click",runH2HParse);
+
+    document.getElementById("btn_h2h_clear").addEventListener("click",runH2HClear);
+
+    document.getElementById("btn_h_form_calc").addEventListener("click",()=>calcFormInfo("h"));
+
+    document.getElementById("btn_a_form_calc").addEventListener("click",()=>calcFormInfo("a"));
+
+    document.getElementById("btn_abs_calc").addEventListener("click",calcAbsSummary);
+
+
+
+    document.getElementById("preset_reguler").addEventListener("click",()=>applyPresetContext("reguler"));
+
+    document.getElementById("preset_derby").addEventListener("click",()=>applyPresetContext("derby"));
+
+    document.getElementById("preset_final").addEventListener("click",()=>applyPresetContext("final"));
+
+    document.getElementById("preset_friendly").addEventListener("click",()=>applyPresetContext("friendly"));
+
+
+
+    document.getElementById("preset_sim_fast").addEventListener("click",()=>applyPresetSim("fast"));
+
+    document.getElementById("preset_sim_std").addEventListener("click",()=>applyPresetSim("std"));
+
+    document.getElementById("preset_sim_max").addEventListener("click",()=>applyPresetSim("max"));
+
+
+
+    document.getElementById("btn_analyze").addEventListener("click",runAnalyze);
+
+    document.getElementById("btn_clear").addEventListener("click",clearAll);
+
+});
+
+</script>
+</body>
+</html>

@@ -1,0 +1,1380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Match Simulation Engine — FINAL GOD ENGINE ∞.4 (Standalone)</title>
+
+<style>
+body {
+  background:#111;
+  color:#eee;
+  font-family:Arial, sans-serif;
+  padding:20px;
+}
+h1 {
+  font-size:26px;
+  margin-bottom:15px;
+  color:#6af7ff;
+}
+.section {
+  padding:10px 15px;
+  border:1px solid #444;
+  margin-bottom:15px;
+  border-radius:7px;
+  background:#1b1b1b;
+}
+label { display:block; margin-top:7px; }
+input, select {
+  width:100%;
+  padding:6px;
+  margin-top:4px;
+  background:#222;
+  border:1px solid #444;
+  color:#eee;
+  border-radius:5px;
+}
+button {
+  padding:10px 15px;
+  background:#0ca9d4;
+  color:#000;
+  border:none;
+  border-radius:6px;
+  cursor:pointer;
+  margin-top:15px;
+  font-weight:bold;
+}
+button:hover {
+  background:#11c0ef;
+}
+textarea {
+  width:100%;
+  height:260px;
+  background:#000;
+  color:#0f0;
+  padding:10px;
+  border:1px solid #333;
+  margin-top:10px;
+  border-radius:5px;
+  font-family:monospace;
+}
+</style>
+</head>
+
+<body>
+
+<h1>Match Simulation Engine — FINAL GOD ENGINE ∞.4</h1>
+
+<!-- ============================== -->
+<!-- SECTION INPUTS                 -->
+<!-- ============================== -->
+
+<div class="section">
+  <h2>Input Statistik</h2>
+
+  <label>Expected Goals Home (λH)</label>
+  <input id="lamH" type="number" min="0.1" max="5" step="0.05">
+
+  <label>Expected Goals Away (λA)</label>
+  <input id="lamA" type="number" min="0.1" max="5" step="0.05">
+
+  <label>Tempo (1–10)</label>
+  <input id="tempo" type="number" min="1" max="10">
+
+  <label>Chaos (1–10)</label>
+  <input id="chaos" type="number" min="1" max="10">
+
+  <label>Importance (1–10)</label>
+  <input id="importance" type="number" min="1" max="10">
+</div>
+
+<div class="section">
+  <h2>Data Tim</h2>
+
+  <label>Home Stability (1–10)</label>
+  <input id="home_st" type="number" min="1" max="10">
+
+  <label>Away Stability (1–10)</label>
+  <input id="away_st" type="number" min="1" max="10">
+
+  <label>Home Momentum (1–10)</label>
+  <input id="home_mom" type="number" min="1" max="10">
+
+  <label>Away Momentum (1–10)</label>
+  <input id="away_mom" type="number" min="1" max="10">
+</div>
+
+<div class="section">
+  <h2>Taktik & Formasi</h2>
+
+  <label>Home Press Intensity (1–10)</label>
+  <input id="home_press" type="number" min="1" max="10">
+
+  <label>Away Press Intensity (1–10)</label>
+  <input id="away_press" type="number" min="1" max="10">
+
+  <label>Home Flex (0–1)</label>
+  <input id="home_flex" type="number" min="0" max="1" step="0.05">
+
+  <label>Away Flex (0–1)</label>
+  <input id="away_flex" type="number" min="0" max="1" step="0.05">
+</div>
+
+<div class="section">
+  <h2>Simulasi</h2>
+
+  <label>SimCount (Default 50000)</label>
+  <input id="simCount" type="number" min="5000" max="300000">
+
+  <label>Score Cap (Default Auto)</label>
+  <input id="scoreCap" type="number" min="3" max="8">
+
+  <button id="btn_analyze">ANALYZE FINAL GOD ENGINE</button>
+</div>
+
+<!-- ============================== -->
+<!-- OUTPUT                         -->
+<!-- ============================== -->
+
+<div class="section">
+  <h2>Output</h2>
+  <textarea id="output" readonly></textarea>
+</div>
+
+<!-- ============================== -->
+<!-- ENGINE SCRIPT LOADER           -->
+<!-- (PART 2–8 akan ditempel nanti) -->
+<!-- ============================== -->
+
+<script>
+// V20 NAMESPACE (kosong dulu)
+// Semua fungsi engine nanti masuk ke sini
+const V20 = {};
+</script>
+<script>
+// ======================================================================
+// PART 2 — BASIC MATH & UTILITY FUNCTIONS (FINAL GOD ENGINE ∞.4)
+// ======================================================================
+
+const V20 = {};
+
+/* ---------------------------------------------------------------
+   1) CLAMP (mengunci angka dalam batas min - max)
+----------------------------------------------------------------*/
+V20.clamp = function(value, min, max){
+  if (value < min) return min;
+  if (value > max) return max;
+  return value;
+};
+
+/* ---------------------------------------------------------------
+   2) SAFE NUMBER
+      Mengubah input user jadi angka aman, fallback jika tidak valid
+----------------------------------------------------------------*/
+V20.num = function(v, fallback=0){
+  const n = Number(v);
+  return isFinite(n) ? n : fallback;
+};
+
+/* ---------------------------------------------------------------
+   3) POISSON PMF
+      Probability Mass Function: P(X=k) untuk X ~ Poisson(λ)
+----------------------------------------------------------------*/
+V20.poissonPMF = function(lambda, k){
+  lambda = Math.max(lambda, 0.00001);
+  if (k < 0) return 0;
+
+  // Poisson PMF = (e^-λ * λ^k) / k!
+  return Math.exp(-lambda + k * Math.log(lambda) - V20._logFactorial(k));
+};
+
+/* ---------------------------------------------------------------
+   4) LOG FACTORIAL (dipakai Poisson)
+----------------------------------------------------------------*/
+V20._logFactorialCache = [0];
+V20._logFactorial = function(n){
+  const cache = V20._logFactorialCache;
+  if (cache[n] != null) return cache[n];
+
+  let val = cache[cache.length - 1];
+  for (let i = cache.length; i <= n; i++){
+    val += Math.log(i);
+    cache[i] = val;
+  }
+  return cache[n];
+};
+
+/* ---------------------------------------------------------------
+   5) SAMPLE POISSON RANDOM
+      RNG untuk sampling sesuai distribusi Poisson
+----------------------------------------------------------------*/
+V20.samplePoisson = function(lambda){
+  lambda = Math.max(lambda, 0.00001);
+  
+  const L = Math.exp(-lambda);
+  let p = 1, k = 0;
+
+  do {
+    p *= Math.random();
+    k++;
+  } while (p > L);
+
+  return k - 1;
+};
+
+/* ---------------------------------------------------------------
+   6) RANDOM CHOICE (pilihan berdasarkan proporsi bobot)
+----------------------------------------------------------------*/
+V20.randomChoice = function(weights){
+  let sum = 0;
+  for (let w of weights) sum += w;
+
+  const r = Math.random() * sum;
+  let acc = 0;
+
+  for (let i=0; i<weights.length; i++){
+    acc += weights[i];
+    if (r <= acc) return i;
+  }
+  return weights.length - 1;
+};
+
+/* ---------------------------------------------------------------
+   7) NORMALIZE ARRAY OF NUMBERS (jumlah = 1)
+----------------------------------------------------------------*/
+V20.normalize = function(arr){
+  let s = 0;
+  for (let x of arr) s += x;
+  if (!s) return arr.map(()=>1/arr.length);
+  return arr.map(x => x/s);
+};
+
+/* ---------------------------------------------------------------
+   8) SAFE OBJECT GETTER
+----------------------------------------------------------------*/
+V20.safe = function(obj, field, def){
+  if (obj && obj[field] != null) return obj[field];
+  return def;
+};
+
+/* ---------------------------------------------------------------
+   9) DOT PRODUCT (dipakai God Fusion)
+----------------------------------------------------------------*/
+V20.dot = function(a, b){
+  let s = 0;
+  for (let i=0; i<a.length; i++) s += a[i]*b[i];
+  return s;
+};
+
+/* ---------------------------------------------------------------
+   10) HASH STRING (opsional untuk debug)
+----------------------------------------------------------------*/
+V20.hash = function(str){
+  let h = 0;
+  for (let i=0;i<str.length;i++){
+    h = (h<<5) - h + str.charCodeAt(i);
+    h |= 0;
+  }
+  return Math.abs(h);
+};
+
+  </script>
+  <script>
+// ======================================================================
+// PART 3 — GOD HYPER-LAMBDA + DIVINE PATTERN ORACLE
+// ======================================================================
+
+/* ---------------------------------------------------------------
+   1) DIVINE PATTERN ORACLE (DPO)
+      Membaca karakter pertandingan berdasarkan:
+      - tempo
+      - chaos
+      - importance
+      - stability
+      - momentum gap
+      - press intensity gap
+      Menghasilkan 4 pola:
+        control / swing / stalled / chaotic
+----------------------------------------------------------------*/
+V20.patternOracle = function(ctx, home, away, tact){
+  ctx = ctx || {};
+  home = home || {stability:5, momentum:5};
+  away = away || {stability:5, momentum:5};
+  tact = tact || {
+    home:{pressIntensity:5, flex:0.5},
+    away:{pressIntensity:5, flex:0.5}
+  };
+
+  const tempo = ctx.tempo || 5;
+  const chaos = ctx.chaos || 5;
+  const imp   = ctx.importance || 5;
+
+  const stH = home.stability || 5;
+  const stA = away.stability || 5;
+  const stabAvg = (stH + stA)/2;
+
+  const momGap = (home.momentum || 5) - (away.momentum || 5);
+  const pressGap = (tact.home.pressIntensity || 5) - (tact.away.pressIntensity || 5);
+
+  // Normalisasi faktor
+  const tempoF = (tempo - 5)/5;
+  const chaosF = (chaos - 5)/5;
+  const impF   = (imp   - 5)/5;
+  const stabF  = (stabAvg - 5)/5;
+
+  // Pola dasar
+  let control = 0.35 
+              - chaosF*0.20
+              + stabF*0.25
+              + impF*0.05;
+
+  let swing   = 0.25
+              + Math.abs(momGap)*0.04
+              + Math.abs(pressGap)*0.05
+              + tempoF*0.15;
+
+  let stalled = 0.15
+              + (-tempoF)*0.20
+              + stabF*0.15;
+
+  let chaotic = 0.25
+              + chaosF*0.35
+              + tempoF*0.15
+              - stabF*0.10;
+
+  // Clamp & normalisasi
+  control = Math.max(control, 0.01);
+  swing   = Math.max(swing  , 0.01);
+  stalled = Math.max(stalled, 0.01);
+  chaotic = Math.max(chaotic, 0.01);
+
+  let sum = control + swing + stalled + chaotic;
+
+  const pattern = {
+    control: control/sum,
+    swing:   swing/sum,
+    stalled: stalled/sum,
+    chaotic: chaotic/sum
+  };
+
+  // tentukan pola dominan
+  let dom = "control";
+  let maxVal = pattern.control;
+
+  if(pattern.swing   > maxVal){ dom="swing";   maxVal=pattern.swing; }
+  if(pattern.stalled > maxVal){ dom="stalled"; maxVal=pattern.stalled; }
+  if(pattern.chaotic > maxVal){ dom="chaotic"; maxVal=pattern.chaotic; }
+
+  return {
+    pattern,
+    dominant: dom
+  };
+};
+
+
+/* ---------------------------------------------------------------
+   2) GOD HYPER-LAMBDA (HLA)
+      Lambda ver. tertinggi:
+      - dimulai dari input λH/λA murni
+      - diperkuat Legendary Lambda
+      - dikoreksi Pattern Oracle
+      - dikendalikan stability, momentum, press, tempo, chaos
+----------------------------------------------------------------*/
+V20.godHyperLambda = function(lambda, ctx, home, away, tact){
+
+  lambda = lambda || {};
+  ctx    = ctx || {};
+  home   = home || {stability:5, momentum:5};
+  away   = away || {stability:5, momentum:5};
+  tact   = tact || {
+    home:{pressIntensity:5, flex:0.5},
+    away:{pressIntensity:5, flex:0.5}
+  };
+
+  // Lambda dasar (input user)
+  let lamH = V20.num(lambda.lamH, 1.2);
+  let lamA = V20.num(lambda.lamA, 1.0);
+
+  const tempo = ctx.tempo || 5;
+  const chaos = ctx.chaos || 5;
+  const imp   = ctx.importance || 5;
+
+  const momH = home.momentum || 5;
+  const momA = away.momentum || 5;
+  const stH  = home.stability || 5;
+  const stA  = away.stability || 5;
+
+  const pressH = tact.home.pressIntensity || 5;
+  const pressA = tact.away.pressIntensity || 5;
+
+  const flexH = tact.home.flex || 0.5;
+  const flexA = tact.away.flex || 0.5;
+
+  const momGap   = momH - momA;
+  const pressGap = pressH - pressA;
+  const stabAvg  = (stH + stA)/2;
+
+  // Pola dari Divine Pattern Oracle
+  const PO = V20.patternOracle(ctx, home, away, tact);
+  const pat = PO.pattern;      // berisi: control, swing, stalled, chaotic
+  const dom = PO.dominant;
+
+  // -------------------------------
+  // Kalibrasi berdasar parameter
+  // -------------------------------
+  const tempoF = (tempo - 5)/5;
+  const chaosF = (chaos - 5)/5;
+  const stabF  = (stabAvg - 5)/5;
+
+  // CONTROL → menurunkan chaos → gol turun sedikit
+  lamH *= (1 - pat.control * 0.05);
+  lamA *= (1 - pat.control * 0.05);
+
+  // SWING → perbedaan momentum & pressing menaikkan gol
+  const swingH = pat.swing * (Math.max(0, momGap)/10 + Math.max(0, pressGap)/10);
+  const swingA = pat.swing * (Math.max(0,-momGap)/10 + Math.max(0,-pressGap)/10);
+
+  lamH *= (1 + swingH*0.22);
+  lamA *= (1 + swingA*0.22);
+
+  // STALLED → tempo turun → gol turun
+  lamH *= (1 - pat.stalled * 0.10);
+  lamA *= (1 - pat.stalled * 0.10);
+
+  // CHAOTIC → boosting kuat
+  lamH *= (1 + pat.chaotic * 0.25);
+  lamA *= (1 + pat.chaotic * 0.25);
+
+  // Pressing ekstrem (God effect)
+  lamH *= (1 + (pressH-5)*0.015);
+  lamA *= (1 + (pressA-5)*0.015);
+
+  // Flexibility → membuka permainan
+  lamH *= (1 + flexH*0.05);
+  lamA *= (1 + flexA*0.05);
+
+  // Chaos global → boosting akhir
+  lamH *= (1 + chaosF*0.10);
+  lamA *= (1 + chaosF*0.10);
+
+  // Clamp
+  lamH = V20.clamp(lamH, 0.20, 6.00);
+  lamA = V20.clamp(lamA, 0.20, 6.00);
+
+  return {
+    lamH,
+    lamA,
+    pattern: pat,
+    dominantPattern: dom
+  };
+};
+
+  </script>
+<script>
+// ======================================================================
+// PART 4 — DIVINE MULTI-REALITY MONTE CARLO (DMR-MC)
+// ======================================================================
+
+/*
+  V20.monteCarlo(lambda, ctx, simCount, scoreCap, home, away, tact)
+
+  Input:
+    lambda: { lamH, lamA }
+    ctx   : { tempo, chaos, importance }
+    home  : { stability, momentum }
+    away  : { stability, momentum }
+    tact  : {
+      home:{ pressIntensity, flex },
+      away:{ pressIntensity, flex }
+    }
+
+  Output:
+    {
+      simCount, pH, pD, pA, avgGoals,
+      matrix, scoreCap, ou,
+      god:{ pattern, hyperLambda },
+      scenarioStats:{ scenarios, count, phases }
+    }
+*/
+
+V20.monteCarlo = function(lambda, ctx, simCount, scoreCap, home, away, tact){
+  lambda = lambda || {};
+  ctx    = ctx || {};
+  home   = home || {stability:5, momentum:5};
+  away   = away || {stability:5, momentum:5};
+  tact   = tact || {
+    home:{pressIntensity:5, flex:0.5},
+    away:{pressIntensity:5, flex:0.5}
+  };
+
+  // ============== HYPER-LAMBDA & PATTERN ==============
+  const god = V20.godHyperLambda(lambda, ctx, home, away, tact);
+  const lamH_base = god.lamH;
+  const lamA_base = god.lamA;
+  const totalLam  = lamH_base + lamA_base || 0.0001;
+
+  const pat   = god.pattern;    // {control,swing,stalled,chaotic}
+  const chaos = ctx.chaos || 5;
+  const tempo = ctx.tempo || 5;
+  const imp   = ctx.importance || 5;
+  const stabAvg = (home.stability + away.stability)/2;
+
+  const chaosF = (chaos - 5)/5;
+  const tempoF = (tempo - 5)/5;
+  const impF   = (imp   - 5)/5;
+  const stabF  = (stabAvg - 5)/5;
+
+  // ============== SIMCOUNT ADAPTIF ==============
+  const baseSim = simCount ? V20.num(simCount) : 50000;
+
+  let patternScale =
+      1.00
+    + pat.swing   * 0.30
+    + pat.chaotic * 0.35
+    - pat.stalled * 0.25;
+
+  const globalAdj =
+      chaosF*0.35 +
+      tempoF*0.25 +
+      impF  *0.15 -
+      stabF *0.20;
+
+  let simScaled = baseSim * (1 + globalAdj*0.7) * patternScale;
+  simScaled = V20.clamp(simScaled, 30000, 280000);
+  simCount  = Math.round(simScaled);
+
+  // ============== SCORE CAP ==============
+  const autoCap = totalLam > 3.4 ? 6 : 5;
+  scoreCap = V20.clamp(scoreCap || autoCap, 3, 8);
+
+  // ============== PHASES (early/mid/late) ==============
+  const phases = {
+    early:1,
+    mid:1,
+    late:1,
+    wEarly:0.25,
+    wMid:0.50,
+    wLate:0.25
+  };
+
+  let wSum = phases.wEarly + phases.wMid + phases.wLate;
+  if (!wSum || !isFinite(wSum)) wSum = 1;
+
+  const phaseList = [
+    {name:"early", w:phases.wEarly/wSum, m:phases.early||1},
+    {name:"mid",   w:phases.wMid  /wSum, m:phases.mid  ||1},
+    {name:"late",  w:phases.wLate /wSum, m:phases.late ||1}
+  ];
+  let acc=0;
+  phaseList.forEach(p=>{ acc+=p.w; p.cum=acc; });
+
+  function pickPhase(){
+    const r = Math.random();
+    for(let i=0;i<phaseList.length;i++){
+      if(r<=phaseList[i].cum) return phaseList[i];
+    }
+    return phaseList[phaseList.length-1];
+  }
+
+  // ============== 3 REALITAS (A,B,C) ==============
+  function realityParams(type){
+    let fH=1, fA=1, spread=0.6;
+
+    if(type==="A"){            // stabil
+      fH=1.00; fA=1.00; spread=0.45;
+    } else if(type==="B"){     // chaos boosted
+      fH=1.00 + Math.max(0, chaosF)*0.20;
+      fA=1.00 + Math.max(0, chaosF)*0.20;
+      spread = 0.7 + Math.max(0, chaosF)*0.7;
+    } else {                   // "C" pattern reality
+      const swingBoost   = pat.swing*0.10;
+      const chaoticBoost = pat.chaotic*0.12;
+      fH = 1.00 + swingBoost + chaoticBoost;
+      fA = 1.00 + swingBoost + chaoticBoost;
+      spread = 0.6 + (pat.chaotic+pat.swing)*0.7;
+    }
+    return {fH,fA,spread};
+  }
+
+  const realityWeights = {
+    A: 0.40 + pat.control*0.20,
+    B: 0.30 + pat.chaotic*0.30,
+    C: 0.30 + pat.swing*0.30
+  };
+  let wR = realityWeights.A + realityWeights.B + realityWeights.C;
+  realityWeights.A/=wR; realityWeights.B/=wR; realityWeights.C/=wR;
+
+  function pickReality(){
+    const r = Math.random();
+    if (r <= realityWeights.A) return "A";
+    if (r <= realityWeights.A + realityWeights.B) return "B";
+    return "C";
+  }
+
+  // ============== SCENARIO ENGINE ==============
+  const ratioH = lamH_base / totalLam;
+  const ratioA = 1 - ratioH;
+
+  const scenarios = [
+    {name:"base",      w:0.30, fH:1.00, fA:1.00},
+    {name:"control",   w:0.08 + 0.25*pat.control, fH:0.97, fA:0.97},
+    {name:"swing",     w:0.08 + 0.25*pat.swing,   fH:1.07, fA:1.07},
+    {name:"stalled",   w:0.06 + 0.22*pat.stalled, fH:0.78, fA:0.78},
+    {name:"chaotic",   w:0.06 + 0.22*pat.chaotic, fH:1.18, fA:1.18},
+    {name:"homeFront", w:0.06 + 0.10*ratioH,      fH:1.08, fA:0.97},
+    {name:"awayFront", w:0.06 + 0.10*ratioA,      fH:0.97, fA:1.08},
+    {name:"wideOpen",  w:0.04 + 0.12*Math.max(0,tempoF)*Math.max(0,chaosF), fH:1.22, fA:1.22}
+  ];
+
+  // Gate/dampener skenario ekstrem
+  scenarios.forEach(s=>{
+    if(s.name==="wideOpen")  s.w *= 0.90;
+    if(s.name==="chaotic")   s.w *= 0.93;
+    if(s.name==="stalled")   s.w *= 0.95;
+  });
+
+  wSum=0; scenarios.forEach(s=>wSum+=s.w);
+  scenarios.forEach(s=>s.p = s.w/wSum);
+
+  const cumSc=[];
+  acc=0;
+  for(let i=0;i<scenarios.length;i++){
+    acc += scenarios[i].p;
+    cumSc[i]=acc;
+  }
+
+  function pickScenario(){
+    const r = Math.random();
+    for(let i=0;i<cumSc.length;i++){
+      if(r<=cumSc[i]) return scenarios[i];
+    }
+    return scenarios[scenarios.length-1];
+  }
+
+  // ============== HYBRID SAMPLER ==============
+  function sampleHybrid(lambdaBase, spreadBase){
+    lambdaBase = Math.max(lambdaBase, 0.00001);
+    const r = Math.random();
+
+    if(r < 0.55){
+      return V20.samplePoisson(lambdaBase);
+    } else if(r < 0.85){
+      const factor = Math.exp((Math.random()-0.5)*spreadBase);
+      const lamVar = V20.clamp(lambdaBase*factor, 0.05, 6.2);
+      return V20.samplePoisson(lamVar);
+    } else {
+      const factor = Math.exp((Math.random()-0.5)*(spreadBase+0.4));
+      const lamVar = V20.clamp(lambdaBase*factor, 0.05, 6.8);
+      return V20.samplePoisson(lamVar);
+    }
+  }
+
+  // ============== LOOP SIMULASI ==============
+  let homeWins=0, draws=0, awayWins=0;
+  let total=0, goalsTotal=0;
+
+  const matrix=[];
+  for(let h=0;h<=scoreCap;h++){
+    matrix[h]=[];
+    for(let a=0;a<=scoreCap;a++){
+      matrix[h][a]=0;
+    }
+  }
+
+  const scenarioCount={};
+  scenarios.forEach(s=>scenarioCount[s.name]=0);
+
+  for(let i=0;i<simCount;i++){
+    const phase   = pickPhase();
+    const sc      = pickScenario();
+    const reality = pickReality();
+
+    scenarioCount[sc.name]++;
+
+    const baseLamH = lamH_base * phase.m * sc.fH;
+    const baseLamA = lamA_base * phase.m * sc.fA;
+
+    const rp = realityParams(reality);
+    const lamH_sim = baseLamH * rp.fH;
+    const lamA_sim = baseLamA * rp.fA;
+
+    const h = sampleHybrid(lamH_sim, rp.spread);
+    const a = sampleHybrid(lamA_sim, rp.spread);
+
+    total++;
+    goalsTotal += (h+a);
+
+    if(h>a) homeWins++;
+    else if(h===a) draws++;
+    else awayWins++;
+
+    if(h<=scoreCap && a<=scoreCap){
+      matrix[h][a]++;
+    }
+  }
+
+  const pH = homeWins/total;
+  const pD = draws/total;
+  const pA = awayWins/total;
+  const avgGoals = goalsTotal/total;
+
+  // ============== OU (Analitik + MC) ==============
+  let lamEff = totalLam;
+  lamEff *= (1 + chaosF*0.10 + tempoF*0.05);
+  lamEff = V20.clamp(lamEff, 0.5, 5.8);
+
+  const lines = [0.5,1.5,2.5,3.5];
+  const ou   = {};
+  const ouAn = {};
+  const ouMC = {};
+
+  lines.forEach(line=>{
+    let under=0;
+    for(let k=0;k<=Math.floor(line);k++){
+      under += V20.poissonPMF(lamEff,k);
+    }
+    ouAn[line]={under,over:1-under};
+  });
+
+  lines.forEach(line=>{
+    const cut = Math.floor(line);
+    let under=0, over=0;
+    for(let h=0;h<=scoreCap;h++){
+      for(let a=0;a<=scoreCap;a++){
+        const sum = h+a;
+        if(sum<=cut) under+=matrix[h][a];
+        else         over +=matrix[h][a];
+      }
+    }
+    ouMC[line]={under:under/total, over:over/total};
+  });
+
+  const patternChaos = pat.chaotic + pat.swing*0.6;
+  const wMC = 0.40 + 0.40*Math.max(0, patternChaos);
+  const wAN = 1 - wMC;
+
+  lines.forEach(line=>{
+    ou[line] = {
+      over:  ouAn[line].over  *wAN + ouMC[line].over  *wMC,
+      under: ouAn[line].under *wAN + ouMC[line].under *wMC
+    };
+  });
+
+  return {
+    simCount,
+    pH,pD,pA,
+    avgGoals,
+    matrix,
+    scoreCap,
+    ou,
+    god:{
+      pattern: pat,
+      hyperLambda:{lamH:lamH_base,lamA:lamA_base}
+    },
+    scenarioStats:{
+      scenarios:scenarios.map(s=>({name:s.name,p:s.p})),
+      count:scenarioCount,
+      phases:phaseList
+    }
+  };
+};
+
+</script>
+  <script>
+// ======================================================================
+// PART 5 — GOD SUPPORT FUNCTIONS & FUSION (FINAL GOD ENGINE ∞.4)
+// ======================================================================
+
+/* ---------------------------------------------------------------
+   1) DETSIM — POISSON DETERMINISTIC VIEW
+----------------------------------------------------------------*/
+V20.detSim = function(lambda){
+  lambda = lambda || {};
+  const lamH = Math.max(V20.num(lambda.lamH, 1.0), 0.01);
+  const lamA = Math.max(V20.num(lambda.lamA, 1.0), 0.01);
+
+  const maxG = 8;
+  let pH=0, pD=0, pA=0, total=0;
+
+  const ou = {
+    "0.5":{over:0,under:0},
+    "1.5":{over:0,under:0},
+    "2.5":{over:0,under:0},
+    "3.5":{over:0,under:0}
+  };
+
+  for (let h=0; h<=maxG; h++){
+    const pPH = V20.poissonPMF(lamH,h);
+    for (let a=0; a<=maxG; a++){
+      const pPA = V20.poissonPMF(lamA,a);
+      const p   = pPH*pPA;
+      total += p;
+
+      if (h>a)      pH += p;
+      else if(h===a)pD += p;
+      else          pA += p;
+
+      const sum=h+a;
+      if (sum>0) ou["0.5"].over+=p; else ou["0.5"].under+=p;
+      if (sum>1) ou["1.5"].over+=p; else ou["1.5"].under+=p;
+      if (sum>2) ou["2.5"].over+=p; else ou["2.5"].under+=p;
+      if (sum>3) ou["3.5"].over+=p; else ou["3.5"].under+=p;
+    }
+  }
+
+  if (total>0){
+    pH/=total; pD/=total; pA/=total;
+    Object.keys(ou).forEach(k=>{
+      ou[k].over  /= total;
+      ou[k].under /= total;
+    });
+  }
+
+  return {pH,pD,pA,ou};
+};
+
+
+/* ---------------------------------------------------------------
+   2) CHAOS MODEL VIEW
+----------------------------------------------------------------*/
+V20.chaosModel = function(lambda, ctx){
+  lambda = lambda || {};
+  ctx    = ctx || {};
+
+  const lamH = Math.max(V20.num(lambda.lamH,1.0), 0.01);
+  const lamA = Math.max(V20.num(lambda.lamA,1.0), 0.01);
+
+  const chaos = ctx.chaos || 5;
+  const chaosF = (chaos - 5)/5;   // -1..1
+
+  const factor = 1 + V20.clamp(chaosF*0.24, -0.24, 0.36);
+
+  return {
+    lamH: V20.clamp(lamH*factor, 0.20, 6.00),
+    lamA: V20.clamp(lamA*factor, 0.20, 6.00)
+  };
+};
+
+
+/* ---------------------------------------------------------------
+   3) ANTI-BIAS COMPRESSOR FOR 1X2
+----------------------------------------------------------------*/
+V20.compress1x2 = function(pH,pD,pA, level){
+  function compress(x,c,f){ return c + (x-c)*f; }
+
+  let factor = 0.86;
+  if (level === "medium") factor = 0.76;
+  else if (level === "strong") factor = 0.65;
+  else if (level === "ultra") factor = 0.55;
+
+  const c  = 1/3;
+  const cH = compress(pH,c,factor);
+  const cD = compress(pD,c,factor);
+  const cA = compress(pA,c,factor);
+  const s  = cH + cD + cA;
+
+  return {
+    pH: cH/s,
+    pD: cD/s,
+    pA: cA/s
+  };
+};
+
+
+/* ---------------------------------------------------------------
+   4) UNCERTAINTY (ENTROPI 1X2)
+----------------------------------------------------------------*/
+V20.uncertainty = function(pH,pD,pA){
+  const probs = [pH,pD,pA];
+  let entropy = 0;
+  probs.forEach(p=>{
+    if (p>0) entropy -= p*Math.log2(p);
+  });
+  const maxE = Math.log2(3);
+  const norm = maxE>0 ? entropy/maxE : 0;
+
+  return {
+    entropy,
+    normEntropy: norm,
+    uncertaintyScore: norm*100
+  };
+};
+
+
+/* ---------------------------------------------------------------
+   5) RISK INDEX
+----------------------------------------------------------------*/
+V20.riskIndex = function(lambda, ctx, home, away, tact){
+  lambda = lambda || {};
+  ctx    = ctx || {};
+  home   = home || {stability:5};
+  away   = away || {stability:5};
+  tact   = tact || {home:{flex:0.5}, away:{flex:0.5}};
+
+  const lamH = V20.num(lambda.lamH,1.0);
+  const lamA = V20.num(lambda.lamA,1.0);
+  const totalLam = lamH + lamA;
+
+  const chaos   = ctx.chaos || 5;
+  const flex    = (tact.home.flex || 0.5) + (tact.away.flex || 0.5);
+  const stabAvg = (home.stability + away.stability)/2;
+
+  let risk = 0;
+  risk += (totalLam - 2.4) * 18;
+  risk += (chaos   - 5)    * 7;
+  risk += flex * 40;
+  risk -= (stabAvg - 5) * 4;
+
+  return V20.clamp(risk, 0, 100);
+};
+
+
+/* ---------------------------------------------------------------
+   6) META CONSISTENCY (detSim, chaosSim, MC, final)
+----------------------------------------------------------------*/
+V20.metaConsistency = function(det, mc, detChaos, finalProb){
+  const models = [
+    {pH:det.pH,      pD:det.pD,      pA:det.pA},
+    {pH:mc.pH,       pD:mc.pD,       pA:mc.pA},
+    {pH:detChaos.pH, pD:detChaos.pD, pA:detChaos.pA},
+    {pH:finalProb.pH,pD:finalProb.pD,pA:finalProb.pA}
+  ];
+
+  let sumDiff=0, count=0;
+  for(let i=0;i<models.length;i++){
+    for(let j=i+1;j<models.length;j++){
+      sumDiff += Math.abs(models[i].pH - models[j].pH);
+      sumDiff += Math.abs(models[i].pD - models[j].pD);
+      sumDiff += Math.abs(models[i].pA - models[j].pA);
+      count   += 3;
+    }
+  }
+  const avgDiff = count ? sumDiff/count : 0;
+  const score   = V20.clamp(100 * (1 - avgDiff/0.30), 0, 100);
+
+  return score;
+};
+
+
+/* ---------------------------------------------------------------
+   7) BTTS (Both Teams To Score)
+----------------------------------------------------------------*/
+V20.bttsProb = function(lambda){
+  lambda = lambda || {};
+  const lamH = Math.max(V20.num(lambda.lamH,1.0), 0.0001);
+  const lamA = Math.max(V20.num(lambda.lamA,1.0), 0.0001);
+
+  const pH0 = Math.exp(-lamH);
+  const pA0 = Math.exp(-lamA);
+  const p00 = Math.exp(-(lamH+lamA));
+
+  const pBTTS = 1 - (pH0 + pA0 - p00);
+  return V20.clamp(pBTTS, 0, 1);
+};
+
+
+/* ---------------------------------------------------------------
+   8) FLOW BANDS (0'–90')
+----------------------------------------------------------------*/
+V20.flowBands = function(lambda, ctx){
+  lambda = lambda || {};
+  ctx    = ctx || {};
+
+  const lamH = V20.num(lambda.lamH,1.0);
+  const lamA = V20.num(lambda.lamA,1.0);
+  const totalLam = lamH + lamA;
+
+  const t   = ctx.tempo || 5;
+  const c   = ctx.chaos || 5;
+  const imp = ctx.importance || 5;
+
+  const labels = [
+    "0'-10'","10'-20'","20'-30'","30'-40'",
+    "40'-50'","50'-60'","60'-70'","70'-80'","80'-90'"
+  ];
+
+  const segments=[];
+  const baseInt = (totalLam/3) + (t-5)*0.05 + (c-5)*0.05;
+
+  for(let i=0;i<labels.length;i++){
+    let mult = 1;
+    if      (i<=1) mult *= 0.90;
+    else if (i<=3) mult *= 1.05;
+    else if (i<=5) mult *= 1.10;
+    else           mult *= 1.18;
+
+    if(i>=6) mult *= (1 + (imp-5)*0.018);
+
+    const raw   = baseInt * mult;
+    let level   = "sedang";
+    if(raw <= 0.4) level="rendah";
+    else if(raw >= 1.1) level="tinggi";
+
+    segments.push({
+      label: labels[i],
+      intensity: V20.clamp(raw, 0.20, 1.60),
+      level
+    });
+  }
+
+  return segments;
+};
+
+
+/* ---------------------------------------------------------------
+   9) MOMENTUM SWING INDEX
+----------------------------------------------------------------*/
+V20.momentumSwingIndex = function(home, away, tact){
+  home = home || {momentum:5};
+  away = away || {momentum:5};
+  tact = tact || {
+    home:{pressIntensity:5, flex:0.5},
+    away:{pressIntensity:5, flex:0.5}
+  };
+
+  const formGap  = (home.momentum || 5) - (away.momentum || 5);
+  const pressGap = (tact.home.pressIntensity || 5) - (tact.away.pressIntensity || 5);
+  const flexSum  = (tact.home.flex || 0.5) + (tact.away.flex || 0.5);
+
+  let score = 0;
+  score += Math.abs(formGap)  * 12;
+  score += Math.abs(pressGap) * 40;
+  score += flexSum            * 10;
+
+  return V20.clamp(score, 0, 100);
+};
+
+
+/* ---------------------------------------------------------------
+   10) FRAGILITY INDEX
+----------------------------------------------------------------*/
+V20.fragilityIndex = function(lambda, ctx, home, away){
+  lambda = lambda || {};
+  ctx    = ctx || {};
+  home   = home || {stability:5};
+  away   = away || {stability:5};
+
+  const lamH = V20.num(lambda.lamH,1.0);
+  const lamA = V20.num(lambda.lamA,1.0);
+  const totalLam = lamH + lamA;
+
+  const chaos   = ctx.chaos || 5;
+  const stabAvg = (home.stability + away.stability)/2;
+
+  let f = 0;
+  f += (totalLam - 2.4)*14;
+  f += (chaos    - 5)*8;
+  f -= (stabAvg  - 5)*6;
+
+  return V20.clamp(f, 0, 100);
+};
+
+
+/* ---------------------------------------------------------------
+   11) SCENARIO DENSITY INDEX (SDI)
+----------------------------------------------------------------*/
+V20.scenarioDensityIndex = function(mc){
+  mc = mc || {};
+  const mat   = mc.matrix || [];
+  const cap   = mc.scoreCap || 5;
+  const total = mc.simCount || 1;
+
+  let maxCell = 0;
+  for(let h=0;h<=cap;h++){
+    if (!mat[h]) continue;
+    for(let a=0;a<=cap;a++){
+      const v = mat[h][a] || 0;
+      if(v > maxCell) maxCell = v;
+    }
+  }
+
+  const pMax = maxCell/total;
+  let sdi = 100 * (1 - (pMax/0.45));
+  return V20.clamp(sdi, 0, 100);
+};
+
+
+/* ---------------------------------------------------------------
+   12) GOD FUSION 4-LAYER (FINAL GOD ENGINE)
+//   Layer:
+//     1) detSim (stabil)
+//     2) MC GOD
+//     3) chaosModel view
+//     4) drift layer (rata-rata det & MC)
+//   Output dikompres dengan anti-bias.
+// --------------------------------------------------------------*/
+V20.fuseModels = function(det, mc, detChaos, biasLevel){
+  const diffH = Math.abs(det.pH - detChaos.pH);
+  const diffD = Math.abs(det.pD - detChaos.pD);
+  const diffA = Math.abs(det.pA - detChaos.pA);
+  const vol   = (diffH + diffD + diffA)/3;      // ~0..0.3
+
+  const volNorm = V20.clamp(vol/0.20,0,1);
+
+  let wDetBase   = 0.20;
+  let wMCBase    = 0.55;
+  let wChaosBase = 0.20;
+  let wDriftBase = 0.05;
+
+  // drift: tergantung beda draw det vs mc
+  const driftRaw = Math.abs(det.pD - mc.pD);
+  const driftNorm= V20.clamp(driftRaw/0.20,0,1);
+
+  let wDet   = wDetBase   + 0.06*(1-volNorm);
+  let wChaos = wChaosBase + 0.10*(volNorm);
+  let wDrift = wDriftBase + 0.10*driftNorm;
+  let wMC    = wMCBase;
+
+  // normalisasi bobot
+  let sumW = wDet + wChaos + wDrift + wMC;
+  wDet   /= sumW;
+  wChaos /= sumW;
+  wDrift /= sumW;
+  wMC    /= sumW;
+
+  // DRIFT LAYER = average det & MC
+  const pH_drift = (det.pH + mc.pH)/2;
+  const pD_drift = (det.pD + mc.pD)/2;
+  const pA_drift = (det.pA + mc.pA)/2;
+
+  let pH = det.pH       * wDet
+          + mc.pH       * wMC
+          + detChaos.pH * wChaos
+          + pH_drift    * wDrift;
+
+  let pD = det.pD       * wDet
+          + mc.pD       * wMC
+          + detChaos.pD * wChaos
+          + pD_drift    * wDrift;
+
+  let pA = det.pA       * wDet
+          + mc.pA       * wMC
+          + detChaos.pA * wChaos
+          + pA_drift    * wDrift;
+
+  const s = pH+pD+pA;
+  pH/=s; pD/=s; pA/=s;
+
+  return V20.compress1x2(pH,pD,pA,biasLevel);
+};
+
+  </script>
+  <script>
+// ======================================================================
+// PART 6 — RUNNER & OUTPUT (FINAL GOD ENGINE ∞.4)
+// ======================================================================
+
+V20.runGodEngine = function(){
+  const outEl = document.getElementById('output');
+  if (!outEl){
+    console.error("Output element not found");
+    return;
+  }
+
+  // =========================
+  // 1) BACA INPUT USER
+  // =========================
+  const lamH  = V20.num(document.getElementById('lamH').value, 1.20);
+  const lamA  = V20.num(document.getElementById('lamA').value, 1.00);
+
+  const tempo = V20.num(document.getElementById('tempo').value, 5);
+  const chaos = V20.num(document.getElementById('chaos').value, 5);
+  const importance = V20.num(document.getElementById('importance').value, 5);
+
+  const home_st  = V20.num(document.getElementById('home_st').value, 5);
+  const away_st  = V20.num(document.getElementById('away_st').value, 5);
+  const home_mom = V20.num(document.getElementById('home_mom').value, 5);
+  const away_mom = V20.num(document.getElementById('away_mom').value, 5);
+
+  const home_press = V20.num(document.getElementById('home_press').value, 5);
+  const away_press = V20.num(document.getElementById('away_press').value, 5);
+  const home_flex  = V20.num(document.getElementById('home_flex').value, 0.5);
+  const away_flex  = V20.num(document.getElementById('away_flex').value, 0.5);
+
+  let simCount  = V20.num(document.getElementById('simCount').value, NaN);
+  let scoreCap  = V20.num(document.getElementById('scoreCap').value, NaN);
+  if (!isFinite(simCount)) simCount = undefined;
+  if (!isFinite(scoreCap)) scoreCap = undefined;
+
+  const lambda = { lamH, lamA };
+  const ctx = {
+    tempo,
+    chaos,
+    importance
+  };
+  const home = {
+    stability: home_st,
+    momentum: home_mom
+  };
+  const away = {
+    stability: away_st,
+    momentum: away_mom
+  };
+  const tact = {
+    home: {
+      pressIntensity: home_press,
+      flex: home_flex
+    },
+    away: {
+      pressIntensity: away_press,
+      flex: away_flex
+    }
+  };
+
+  // =========================
+  // 2) JALANKAN ENGINE GOD
+  // =========================
+
+  // view Poisson murni
+  const det = V20.detSim(lambda);
+
+  // chaos view
+  const chaosLambda = V20.chaosModel(lambda, ctx);
+  const detChaos    = V20.detSim(chaosLambda);
+
+  // Monte Carlo GOD
+  const mc = V20.monteCarlo(lambda, ctx, simCount, scoreCap, home, away, tact);
+
+  // probabilitas akhir 1X2 (God Fusion 4-layer)
+  const fused = V20.fuseModels(det, mc, detChaos, "strong");
+
+  // indikasi tambahan
+  const unc   = V20.uncertainty(fused.pH, fused.pD, fused.pA);
+  const risk  = V20.riskIndex(lambda, ctx, home, away, tact);
+  const btts  = V20.bttsProb(lambda);
+  const flow  = V20.flowBands(lambda, ctx);
+  const sdi   = V20.scenarioDensityIndex(mc);
+  const momSw = V20.momentumSwingIndex(home, away, tact);
+  const frag  = V20.fragilityIndex(lambda, ctx, home, away);
+  const meta  = V20.metaConsistency(det, mc, detChaos, fused);
+
+  const godHL = mc.god && mc.god.hyperLambda ? mc.god.hyperLambda : {lamH,lamA};
+  const godPat = mc.god && mc.god.pattern ? mc.god.pattern : null;
+
+  // =========================
+  // 3) SUSUN TEKS OUTPUT
+  // =========================
+  let text = "";
+
+  text += "=== MATCH SIMULATION REPORT — FINAL GOD ENGINE ∞.4 ===\n\n";
+
+  // INPUT
+  text += "[INPUT]\n";
+  text += `λH (input) : ${lamH.toFixed(3)}\n`;
+  text += `λA (input) : ${lamA.toFixed(3)}\n`;
+  text += `Tempo       : ${tempo.toFixed(1)}\n`;
+  text += `Chaos       : ${chaos.toFixed(1)}\n`;
+  text += `Importance  : ${importance.toFixed(1)}\n`;
+  text += `Home Stab   : ${home_st.toFixed(1)} | Mom: ${home_mom.toFixed(1)}\n`;
+  text += `Away Stab   : ${away_st.toFixed(1)} | Mom: ${away_mom.toFixed(1)}\n`;
+  text += `Press H/A   : ${home_press.toFixed(1)} / ${away_press.toFixed(1)}\n`;
+  text += `Flex  H/A   : ${home_flex.toFixed(2)} / ${away_flex.toFixed(2)}\n`;
+  text += `SimCount    : ${mc.simCount}\n`;
+  text += `Score Cap   : ${mc.scoreCap}\n\n`;
+
+  // HYPER LAMBDA
+  text += "[GOD HYPER LAMBDA]\n";
+  text += `λH (God Hyper) : ${godHL.lamH.toFixed(3)}\n`;
+  text += `λA (God Hyper) : ${godHL.lamA.toFixed(3)}\n\n`;
+
+  // PATTERN
+  text += "[PATTERN ORACLE]\n";
+  if (godPat){
+    text += `Control : ${(godPat.control*100).toFixed(1)}%\n`;
+    text += `Swing   : ${(godPat.swing*100).toFixed(1)}%\n`;
+    text += `Stalled : ${(godPat.stalled*100).toFixed(1)}%\n`;
+    text += `Chaotic : ${(godPat.chaotic*100).toFixed(1)}%\n`;
+  } else {
+    text += "Pattern data tidak tersedia.\n";
+  }
+  text += `Dominant Pattern : ${mc.god && mc.god.pattern ? "" : ""}\n\n`;
+
+  // 1X2
+  text += "[1X2 PROBABILITIES — GOD FUSION]\n";
+  text += `Home Win : ${(fused.pH*100).toFixed(1)}%\n`;
+  text += `Draw     : ${(fused.pD*100).toFixed(1)}%\n`;
+  text += `Away Win : ${(fused.pA*100).toFixed(1)}%\n\n`;
+
+  // BTTS & GOALS
+  text += "[GOAL MODEL]\n";
+  text += `Avg Goals (MC)     : ${mc.avgGoals.toFixed(3)}\n`;
+  text += `BTTS (P kedua tim cetak gol) : ${(btts*100).toFixed(1)}%\n\n`;
+
+  // OU
+  text += "[OVER/UNDER (God OU Blend)]\n";
+  const ou = mc.ou || {};
+  ["0.5","1.5","2.5","3.5"].forEach(k=>{
+    const o = ou[k] || {over:0,under:0};
+    text += `O/U ${k}  -> Over: ${(o.over*100).toFixed(1)}% | Under: ${(o.under*100).toFixed(1)}%\n`;
+  });
+  text += "\n";
+
+  // RISK & UNCERTAINTY
+  text += "[RISK & UNCERTAINTY]\n";
+  text += `Risk Index         : ${risk.toFixed(1)} / 100\n`;
+  text += `Fragility Index    : ${frag.toFixed(1)} / 100\n`;
+  text += `Momentum Swing     : ${momSw.toFixed(1)} / 100\n`;
+  text += `Uncertainty (1X2)  : ${unc.uncertaintyScore.toFixed(1)} / 100\n`;
+  text += `Meta-Consistency   : ${meta.toFixed(1)} / 100\n`;
+  text += `Scenario Density   : ${sdi.toFixed(1)} / 100\n\n`;
+
+  // FLOW
+  text += "[FLOW 0'–90']\n";
+  flow.forEach(seg=>{
+    text += `${seg.label}  -> ${seg.level.toUpperCase()}  (intensity ~ ${seg.intensity.toFixed(2)})\n`;
+  });
+  text += "\n";
+
+  // SCENARIO STATS
+  text += "[SCENARIO DISTRIBUTION]\n";
+  if (mc.scenarioStats && mc.scenarioStats.scenarios){
+    mc.scenarioStats.scenarios.forEach(s=>{
+      text += `${s.name.padEnd(10," ")} : ${(s.p*100).toFixed(1)}%\n`;
+    });
+  }
+  text += "\n";
+
+  // SCORE MATRIX
+  text += "[SCORE MATRIX] (frekuensi relatif dalam simulasi)\n";
+  const mat = mc.matrix;
+  const cap = mc.scoreCap;
+
+  text += "     ";
+  for(let a=0;a<=cap;a++){
+    text += `A${a}    `;
+  }
+  text += "\n";
+
+  for(let h=0;h<=cap;h++){
+    text += `H${h}  `;
+    for(let a=0;a<=cap;a++){
+      const v = (mat[h] && mat[h][a]) ? mat[h][a]/mc.simCount : 0;
+      text += v.toFixed(3).padEnd(7," ");
+    }
+    text += "\n";
+  }
+
+  // TULIS KE TEXTAREA
+  outEl.value = text;
+};
+
+
+// ======================================================================
+// EVENT LISTENER TOMBOL
+// ======================================================================
+window.addEventListener('DOMContentLoaded', function(){
+  const btn = document.getElementById('btn_analyze');
+  if (btn){
+    btn.addEventListener('click', function(){
+      try {
+        V20.runGodEngine();
+      } catch(e){
+        console.error(e);
+        alert("Terjadi error saat menjalankan FINAL GOD ENGINE. Lihat console untuk detail.");
+      }
+    });
+  }
+});
+  </script>
+</body>
+  </html>
